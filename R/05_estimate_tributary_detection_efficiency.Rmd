@@ -1,0 +1,415 @@
+---
+title: "05_estimate_tributary_detection_efficiency"
+author: "Markus Min"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r load_libraries, echo = FALSE, warning = FALSE, message = FALSE}
+library(plyr)
+library(tidyverse)
+library(here)
+library(lubridate)
+library(janitor)
+library(kableExtra)
+library(ggrepel)
+```
+
+```{r define_functions, echo = FALSE, warning = FALSE, message = FALSE}
+# first define a data frame for run years
+run_year <- c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24", "24/25")
+run_year_start <- seq(ymd_hms("2004-06-01 00:00:00"), ymd_hms("2024-06-01 00:00:00"), by = "years")
+run_year_end <- seq(ymd_hms("2005-05-31 23:59:59"), ymd_hms("2025-05-31 23:59:59"), by = "years")
+
+run_year_df <- data.frame(run_year, run_year_start, run_year_end)
+
+# variables can either be "discharge only" or "discharge and gage height"
+usgs_data_plot <- function(variables, tributary_name, usgs_file_name){
+  if(variables == "discharge only") {
+    usgs_headers <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 28, header = F, nrows = 1, as.is = T, sep = "\t")
+    usgs <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 30, header = F, sep = "\t")
+    colnames(usgs) <- usgs_headers
+    
+    if (tributary_name == "Imnaha River"){
+    # drop the time zone column
+    usgs %>% 
+      dplyr::select(-tz_cd) -> usgs
+  }
+
+    
+  # edit column names and drop irrelevant ones
+  colnames(usgs) <- c("agency", "site_no", "date_time", "discharge_cfs", "discharge_cfs_approved")
+  
+  # If it's the imnaha, it's reported every 15 minutes. We want just the daily; remove the time
+  if (tributary_name == "Imnaha River"){
+    usgs %>% 
+      mutate(date_time =substr(date_time, start = 1, stop = 10)) -> usgs
+  }
+  
+  usgs %>% 
+    dplyr::select("date_time", "discharge_cfs") %>% 
+    mutate(discharge_cfs = as.numeric(discharge_cfs)) %>% 
+    dplyr::mutate(date_time = ymd(date_time)) %>% 
+    dplyr::mutate(month = month(date_time)) %>% 
+    dplyr::mutate(year = year(date_time))-> usgs
+  
+  # summarise into monthly averages
+  usgs %>% 
+    group_by(year,month) %>% 
+    dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+    dplyr::mutate(year_month = ymd(paste(year, month,"01",sep="-")))-> monthly_discharge
+  
+  # calculate annual (run year) averages
+  usgs %>% 
+    rowwise() %>%
+    dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date_time & run_year_end >= date_time)$run_year) %>% 
+    # drop any data from these run years because we don't have PIT tag data
+    subset(!(run_year %in% c("04/05", "24/25"))) %>% 
+    group_by(run_year) %>% 
+    dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+    dplyr::mutate(year_month = ymd(paste(substr(run_year, start = 4, stop = 5),"01-01",sep="-")))-> annual_discharge
+  
+    # Generate one plot
+  
+  # 1) Monthly discharge + annual mean
+discharge_plot <- ggplot(monthly_discharge, aes(x = year_month, y = mean_discharge_cfs)) +
+  geom_line(aes(color = "Monthly average")) +
+  geom_line(data = annual_discharge, aes(x = year_month, y = mean_discharge_cfs, color = "Run year average")) +
+  scale_color_manual(name = "Value", values = c("Monthly average" = "black", "Run year average" = "#1f78b4")) +
+  theme(legend.position = c(0.8, 0.8)) +
+  geom_point(data = annual_discharge, aes(x = year_month, y = mean_discharge_cfs), 
+             color = "#1f78b4", shape = 23, size = 2, fill = "#a6cee3") +
+  ggtitle(paste0(tributary_name, " Discharge")) +
+  xlab("Month/Year") +
+  ylab("Mean discharge (cfs)") +
+  scale_y_continuous(lim = c(0, round_any(max(monthly_discharge$mean_discharge_cfs), 1000, f = ceiling)), expand = c(0,0))
+
+# 2) Discharge by month of year
+monthly_discharge_plot <- ggplot(monthly_discharge, aes(x = month, y = mean_discharge_cfs, color = as.factor(year))) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  ggtitle(paste0(tributary_name))
+
+return(list(discharge_plot, monthly_discharge_plot))
+    
+    
+  } else{
+    usgs_headers <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 30, header = F, nrows = 1, as.is = T, sep = "\t")
+    usgs <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 32, header = F, sep = "\t")
+    colnames(usgs) <- usgs_headers
+    
+    
+  # edit column names and drop irrelevant ones
+  colnames(usgs) <- c("agency", "site_no", "date_time", "discharge_cfs", "discharge_cfs_approved", "gage_height_feet", "gage_height_feet_approved")
+  
+  usgs %>% 
+    dplyr::select("date_time", "discharge_cfs", "gage_height_feet") %>% 
+    mutate(discharge_cfs = as.numeric(discharge_cfs)) %>% 
+    mutate(gage_height_feet = as.numeric(gage_height_feet)) %>% 
+    dplyr::mutate(date_time = ymd(date_time)) %>% 
+    dplyr::mutate(month = month(date_time)) %>% 
+    dplyr::mutate(year = year(date_time)) -> usgs
+  
+  # summarise into monthly averages
+  usgs %>% 
+    group_by(year,month) %>% 
+    dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+    dplyr::mutate(year_month = ymd(paste(year, month,"01",sep="-")))-> monthly_discharge
+
+  usgs %>% 
+    group_by(year,month) %>% 
+    dplyr::summarise(mean_gage_height_ft = mean(gage_height_feet, na.rm = TRUE)) %>% 
+    dplyr::mutate(year_month = ymd(paste(year, month,"01",sep="-")))-> monthly_gage_height
+  
+  # calculate annual (run year) averages
+  usgs %>% 
+    rowwise() %>%
+    dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date_time & run_year_end >= date_time)$run_year) %>% 
+    # drop any data from these run years because we don't have PIT tag data
+    subset(!(run_year %in% c("04/05", "24/25"))) %>% 
+    group_by(run_year) %>% 
+    dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+    dplyr::mutate(year_month = ymd(paste(substr(run_year, start = 4, stop = 5),"01-01",sep="-")))-> annual_discharge
+
+  usgs %>% 
+    rowwise() %>%
+    dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date_time & run_year_end >= date_time)$run_year) %>% 
+    # drop any data from these run years because we don't have PIT tag data
+    subset(!(run_year %in% c("04/05", "24/25"))) %>% 
+    group_by(run_year) %>% 
+    dplyr::summarise(mean_gage_height_ft = mean(gage_height_feet, na.rm = TRUE)) %>% 
+    dplyr::mutate(year_month = ymd(paste(substr(run_year, start = 4, stop = 5),"01-01",sep="-")))-> annual_gage_height
+  
+  # Generate three plots:
+  
+  # 1) Monthly discharge + annual (by run year) mean
+discharge_plot <- ggplot(monthly_discharge, aes(x = year_month, y = mean_discharge_cfs)) +
+  geom_line(aes(color = "Monthly average")) +
+  geom_line(data = annual_discharge, aes(x = year_month, y = mean_discharge_cfs, color = "Run year average")) +
+  scale_color_manual(name = "Value", values = c("Monthly average" = "black", "Run year average" = "#1f78b4")) +
+  theme(legend.position = c(0.8, 0.8)) +
+  geom_point(data = annual_discharge, aes(x = year_month, y = mean_discharge_cfs),
+             color = "#1f78b4", shape = 23, size = 2, fill = "#a6cee3") +
+  ggtitle(paste0(tributary_name, " Discharge")) +
+  xlab("Month/Year") +
+  ylab("Mean discharge (cfs)") +
+  scale_y_continuous(lim = c(0, round_any(max(monthly_discharge$mean_discharge_cfs), 1000, f = ceiling)), expand = c(0,0))
+
+  # 2) Monthly gage height + annual mean
+gage_height_plot <- ggplot(monthly_gage_height, aes(x = year_month, y = mean_gage_height_ft)) +
+  geom_line(aes(color = "Monthly average")) +
+  geom_line(data = annual_gage_height, aes(x = year_month, y = mean_gage_height_ft, color = "Run year average")) +
+  scale_color_manual(name = "Value", values = c("Monthly average" = "black", "Run year average" = "#1f78b4")) +
+  theme(legend.position = c(0.8, 0.2)) +
+  geom_point(data = annual_gage_height, aes(x = year_month, y = mean_gage_height_ft),
+             color = "#1f78b4", shape = 23, size = 2, fill = "#a6cee3") +
+  ggtitle(paste0(tributary_name, " Stream Gage Height")) +
+  xlab("Month/Year") +
+  ylab("Mean gage height (feet)") +
+  scale_y_continuous(lim = c(0, round_any(max(monthly_gage_height$mean_gage_height_ft), 1, f = ceiling)), expand = c(0,0))
+
+  # 3) Relationship between gage height and discharge, with year as color
+gage_height_v_discharge_plot <- ggplot(usgs, aes(x = discharge_cfs, y = gage_height_feet, color = as.factor(year))) +
+  geom_point() +
+  ggtitle(paste0(tributary_name)) +
+  guides(color = guide_legend(title = "Year", ncol = 2)) +
+  xlab("Discharge (cfs)") +
+  ylab("Gage height (feet)")
+
+# 4) Discharge by month of year
+monthly_discharge_plot <- ggplot(monthly_discharge, aes(x = month, y = mean_discharge_cfs, color = as.factor(year))) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  ggtitle(paste0(tributary_name))
+
+return(list(discharge_plot, monthly_discharge_plot, gage_height_plot, gage_height_v_discharge_plot))
+  }
+
+}
+```
+
+## Description
+This Rmd file will estimate the detection efficiency in each of the tributaries that are states in our model, as long as the tributary has a layout of arrays that allows for detection efficiency to be estimated. Discharge in each tributary is used as a covariate for detection efficiency. There are three sections to this document:
+
+1. Querying tributary discharge data from the [USGS dashboard](https://dashboard.waterdata.usgs.gov/app/nwd/en/)
+2. Reformatting the tributary discharge data
+3. Fitting the Stan model for tributary detection efficiency.
+
+Sections 1 and 2 will go tributary by tributary to address the changing distribution of active arrays over time and determine when a) detections in the tributaries are impossible; b) when it is not possible to calculate detection efficiency in the tributary; and c) when the most downstream (closest to the confluence) site had significant changes in detection capability.
+
+### Tributary overview
+The 17 tributaries in our model can broadly be organized into multiple groups:
+
+#### 1) Tributaries where detection efficiencies can be estimated at a site near the mouth for some years
+- Asotin Creek (2011-)
+- Deschutes River (2013-2019)
+- Entiat River (2007-)
+- Fifteenmile Creek (2011-2019) - note river mouth array still active, but no upstream arrays active starting July 2019
+- Hood River (2015-). NOTE: river mouth site is active since 2012, but we have no detections at upstream sites until 2015
+- Tucannon River (2006-)
+- Umatilla River (2007-)
+- Wenatchee River (2010-)
+
+#### 2) Tributaries with a array within 100 km of the tributary mouth
+- Imnaha River (2011-) - at RKM 7 and 10
+- John Day River (2012-) - at RKM 32. NOTE: River mouth site active since 2007, but no detections at upstream sites until 2012.
+- Methow River - at RKM 3 (2009-2017); at RKM 8 (2017-)
+- Okanogan River (2013-) - at RKM 25
+- Walla Walla River - at RKM 9 and 10, then at RKM 5 starting in 2019
+- Yakima River (2005-) at RKM 76
+
+#### 3) Tributaries without an array within 100 km of the tributary mouth
+- Clearwater River
+- Salmon River
+- Grande Ronde River (this tributary in particular has very few arrays overall)
+
+## Tributary discharge data
+
+For each tributary, discharge data was downloaded from the [USGS dashboard](https://dashboard.waterdata.usgs.gov/app/nwd/en/). For each tributary, a search in the dashboard was conducted for the tributary name, and the USGS station closest to the mouth of that tributary was investigated. Clicking on the icon for the station brings you to the page for that particular station, and you can then click on a link to access the data. Once you click on the link for the data, click on "Daily Data," which will bring you to a page where you can select your data to download. Select "Discharge" and "Gage Height" (if available) from the available parameters, select "Tab-separated" for the Output format, and select 2005-01-01 as the Begin Date and 2024-12-31 as the End Date. Click "Go", and then copy the full output to a plain text editor and save it as a .txt file. These .txt files are all saved in `Data/tributary_data/USGS`.
+
+### USGS data sources for each tributary
+
+#### Asotin Creek
+
+Station: Asotin Creek at Asotin, WA. USGS 13335050
+- discharge and gauge height
+
+```{r asotin_creek_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge only", tributary_name = "Asotin Creek", usgs_file_name = "asotin_creek_13335050_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Clearwater River
+
+The Clearwater River does not have PIT tag detection arrays within 100 km of the confluence of the tributary with the mainstem, and as such detection efficiency will not be estimated (and no tributary discharge data is required).
+
+#### Deschutes River
+
+Station: Deschutes River at Moody, Near Biggs, OR
+USGS 14103000
+- discharge only
+
+```{r deschutes_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge only", tributary_name = "Deschutes River", usgs_file_name = "deschutes_river_14103000_2005-01-01_2024-12-31.txt")
+```
+
+#### Entiat River
+
+Station: Entiat River Near Entiat, WA
+USGS 12452990
+- discharge and gage height
+
+```{r entiat_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Entiat River", usgs_file_name = "entiat_river_12452990_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Fifteenmile Creek
+
+No USGS data is available for this tributary.
+
+#### Grande Ronde River
+
+The Grande Ronde River does not have PIT tag detection arrays within 100 km of the confluence of the tributary with the mainstem, and as such detection efficiency will not be estimated (and no tributary discharge data is required).
+
+#### Hood River
+
+Station: Hood River at Tucker Bridge, near Hood River, OR
+USGS 1412000
+- this is a bit upstream of HRM site and before confluence with Whiskey Creek, but it should be good enough
+- discharge only
+
+```{r hood_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge only", tributary_name = "Hood River", usgs_file_name = "hood_river_14120000_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Imnaha River
+
+Station: Imnaha River at Imnaha, OR
+USGS 13292000
+- Site went offline 2013-10-22 (so last year of analysis should be 2012/2013 run year). You can no longer
+find this site on the USGS dashboard because it has been offline for so long
+- discharge only
+
+```{r imnaha_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge only", tributary_name = "Imnaha River", usgs_file_name = "imnaha_river_13292000_2005-01-01_2013-10-22.txt")
+
+```
+
+#### John Day River
+
+Station: John Day River at Mcdonald Ferry, OR
+USGS 14048000
+- discharge only
+
+```{r john_day_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge only", tributary_name = "John Day River", usgs_file_name = "john_day_river_14048000_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Methow River
+
+Station: Methow River near Pateros, WA
+USGS 12449950
+- discharge and gage height
+
+
+```{r methow_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Methow River", usgs_file_name = "methow_river_12449950_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Okanogan River
+
+Station: Okanogan River at Malott, WA
+USGS 12447200
+- discharge and gage height
+
+```{r okanogan_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Okanogan River", usgs_file_name = "okanogan_river_12447200_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Salmon River
+
+The Salmon River does not have PIT tag detection arrays within 100 km of the confluence of the tributary with the mainstem, and as such detection efficiency will not be estimated (and no tributary discharge data is required).
+
+#### Tucannon River
+
+Station: Tucannon River near Starbuck, WA
+USGS 13344500
+- discharge and gage height
+
+```{r tucannon_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Tucannon River", usgs_file_name = "tucannon_river_13344500_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Umatilla River
+
+Station: Umatilla River near Umatilla, OR
+USGS 14033500
+- discharge only
+
+```{r umatilla_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge only", tributary_name = "Umatilla River", usgs_file_name = "umatilla_river_14033500_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Walla Walla River
+
+Station: Walla Walla River near Touchet, WA
+USGS 14018500
+- discharge and gage height
+
+```{r walla_walla_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Walla Walla River", usgs_file_name = "walla_walla_river_14018500_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Wenatchee River
+
+Station: Wenatchee River at Monitor, WA
+USGS 12462500
+- discharge and gage height
+
+```{r wenatchee_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Wenatchee River", usgs_file_name = "wenatchee_river_12462500_2005-01-01_2024-12-31.txt")
+
+```
+
+#### Yakima River
+
+Station: Yakima River at Kiona, WA
+USGS 12510500
+- discharge and gage height
+- this station is downstream of PRO
+
+```{r yakima_river_usgs_plot, message = FALSE, echo = FALSE}
+# Plot discharge and gage height data
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Yakima River", usgs_file_name = "yakima_river_12510500_2005-01-01_2024-12-31.txt")
+
+```
+
+
+
+
+
+
+
+
+
+

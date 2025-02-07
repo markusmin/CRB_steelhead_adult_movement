@@ -1,0 +1,432 @@
+---
+title: "01_query_data"
+author: "Markus Min"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+### Description
+This Rmd file will go through how we queried PTAGIS and cleaned the resulting queries to prepare the data for later analyses.
+
+## 1. Get tag codes for fish that meet our inclusion criteria
+
+### 1.1 Initial Query
+
+To determine which populations (natal origins) to include in our analysis, we first examined all adult returns (detections in the adult fishway at BON) since 2005.
+
+This first query was created using the following steps:
+
+From the [PTAGIS Dashboard](https://dashboard.ptagis.org): Advanced Reporting Home Page > Create Query Builder2 Report > Interrogation Summary
+
+Once in Query Builder2, select the following filters:
+- 1 Attributes: To the attributes that are selected by default (Tag, Mark File, Site, First Time, Last Time, First Antenna Group, Last Antenna Group, Release Date, Species, Run, Rear Type, and Release Site), and the following attributes: Release Site Basin, Release Site Subbasin, Mark Site Basin, Mark Site Subbasin, Release Site Longitude, Release Site Latitude, Mark Site, Hatchery, Stock, Mark Capture Method, Release Site Code, Mark Site Code, Mark Length, Mark Comment, Mark Conditional Comment, Mark Data Project, Mark Data Project Name, Mark Session Message
+- 2 Metrics: Count, First Obs Date Max
+- 16 First Obs Date/Time: 
+  - Attribute: First Time
+  - From: Value 
+  - Is: Greater than or equal to
+    - Value: 6/1/2005 12:00:00 AM
+- 18 Obs Site: BO1 - Bonneville Bradford Is. Ladder, BO2 - Bonneville Cascades Is. Ladder, BO3 - Bonneville WA Shore Ladder/AFF, BO4 - Bonneville WA Ladder Slots, B2A - BONNEVILLE ADULT WA SHORE, BWL - Bonneville WA Shore Ladder
+  - These are all of the Bonneville adult fishways and therefore will allow you to identify all adult returns
+- 25 Species: Steelhead
+
+Run Report, and download as a CSV. Save this in Data/PTAGIS_queries/intermediate_files/BON_sthd_2005-06-01_2025_01_23.csv
+- The file is named to indicate the time period queried (from 2005-06-01 to the date the query was run)
+
+### 1.2 Filter initial query
+
+```{r chunk-options-libraries, message = FALSE, echo = FALSE, warning = FALSE}
+# set chunk options
+knitr::opts_chunk$set(message = FALSE, echo = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+```
+
+```{r import_reformat_data}
+adult_returns_complete <- clean_names(read.csv(here::here("Data", "PTAGIS_queries", "BON_sthd_2005-06-01_2025_01_23.csv")))
+
+# Remove all individuals where the mark length is greater than 350 mm, but make sure to keep NAs
+subset(adult_returns_complete, mark_length_mm <= 350 | is.na(mark_length_mm)) -> adult_returns
+
+# Also remove all individuals with comments that indicate they were captured as adults
+table(adult_returns$mark_capture_method_name)
+as.data.frame(table(subset(adult_returns, is.na(mark_length_mm))$mark_conditional_comment_name)) %>% 
+  arrange(desc(Freq))
+
+# Keywords to identify individuals tagged as adults: mature, adult, returning
+
+# Look at mark_session_message_value
+as.data.frame(table(subset(adult_returns, is.na(mark_length_mm))$mark_session_message_value)) %>% 
+  arrange(desc(Freq))
+# Here you might also be able to ID based on words like "adult" and "reproduction" in the project description, but these are less reliable
+
+# Find all mark conditional comments that contain the words "mature", "adult", or "returning"
+unique_comments <- unique(adult_returns$mark_conditional_comment_name)
+adult_comments <- unique_comments[grep("mature|Mature|adult|Adult|returning|Returning", unique_comments)]
+# Take out the word immature
+adult_comments <- adult_comments[!(adult_comments %in% c("Immature", "Caudal Fin Damage, Immature"))]
+
+# Remove all fish with comments indicating that they were tagged as adults
+adult_returns_complete %>% 
+  subset(., mark_length_mm <= 350 | is.na(mark_length_mm)) %>%  # keep those with NA mark lengths or mark lengths <= 350 mm
+  subset(., !(mark_conditional_comment_name %in% adult_comments)) -> adult_returns # remove individuals known to have been tagged as adults
+
+
+nrow(subset(adult_returns, rear_type_code == "H" & is.na(mark_length_mm)))
+nrow(subset(adult_returns, rear_type_code == "H" & !(is.na(mark_length_mm))))
+# Approx 50% of hatchery hatchery individuals are missing a mark length
+
+
+# Keep only certain columns
+adult_returns %>% 
+  distinct(tag_code, .keep_all = TRUE) %>% 
+  dplyr::rename(mark_site_code = mark_site_code_value, release_site_code = release_site_code_value,
+                mark_comment = mark_comment_name) %>% 
+  # dplyr::select(tag_code, first_time_value, rear_type_code, release_site_name, release_site_basin_name, release_site_subbasin_name,
+  #               mark_site_basin_name, mark_site_subbasin_name, mark_site_name, hatchery_name, stock_name, mark_site_code, release_site_code,
+  #               mark_comment, mark_length_mm) %>% 
+  mutate(time = mdy_hms(first_time_value)) %>% 
+  mutate(date = date(time)) %>% 
+  dplyr::select(-c(first_time_value, time))-> adult_returns
+
+# Sort into run years
+run_year <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21", "21/22", "22/23", "23/24")
+run_year_start <- seq(ymd("2005-06-01"), ymd("2023-06-01"), by = "years")
+run_year_end <- seq(ymd("2006-05-31"), ymd("2024-05-31"), by = "years")
+
+run_year_df <- data.frame(run_year, run_year_start, run_year_end)
+
+# This code assigns fish to run years; you will receive this warning:
+# Warning: Detected an unexpected many-to-many relationship between `x` and `y`.
+# That's okay - what it's doing is duplicating every fish for every run year,
+# but then the next step filters out all the incorrect run year assignments
+adult_returns %>% 
+  mutate(dummy =TRUE) %>% 
+  left_join(run_year_df %>% mutate(dummy=TRUE), by = "dummy") %>% 
+  filter(run_year_start <= date, run_year_end >= date) %>% 
+  select(-c(dummy, run_year_start, run_year_end)) -> adult_returns
+
+# Export this file as metadata
+write.csv(adult_returns, here::here("Data", "covariate_data", "tag_code_metadata.csv"), row.names = FALSE)
+```
+
+### Selecting tributaries
+
+As a starting point, we use the tributaries included in Richins & Skalski (2018):
+
+1. Hood River
+2. Fifteenmile Creek
+3. Deschutes River
+4. John Day River
+5. Umatilla River
+6. Walla Walla River
+7. Yakima River
+8. Wenatchee River
+9. Entiat River
+10. Tucannon River
+11. Clearwater River
+12. Grande Ronde River
+13. Salmon River
+14. Imnaha river
+
+However, we will exclude the Hood River, as it is part of the Lower Columbia DPS.
+Because of our emphasis on understanding complex movements, our focus
+is on the Middle Columbia, Upper Columbia, and Snake River DPSs.
+
+In addition to these tributaries, we will also include tributaries that have
+at least 350 individuals across eight or more run years, that also have
+sufficient arrays in the natal tributary to assess homing. Based on the below analysis,
+we will add the Okanogan River, Methow River, and Asotin Creek populations. We will
+not include the Klickitat and Wind River tributaries because we cannot 
+reliably estimate detection efficiency in the tributary.
+
+```{r}
+# compare full dataset to Shelby's
+as.data.frame(table(adult_returns$release_site_subbasin_name)) # full dataset
+as.data.frame(table(adult_returns_subset$release_site_subbasin_name)) %>% 
+  arrange(desc(Freq))
+
+# New candidates for inclusion: Klickitat, Lochsa, Methow, Okanogan, Trout (or is this part of another river system?)
+
+# Klickitat
+klickitat_fish <- subset(adult_returns, release_site_subbasin_name == "Klickitat")
+table(klickitat_fish$rear_type_code) 
+table(subset(klickitat_fish, rear_type_code == "H")$run_year)
+table(klickitat_fish$run_year)
+
+# Lochsa
+lochsa_fish <- subset(adult_returns, release_site_subbasin_name == "Lochsa")
+table(lochsa_fish$rear_type_code) 
+table(lochsa_fish$run_year)
+
+# Methow
+methow_fish <- subset(adult_returns, release_site_subbasin_name == "Methow")
+table(methow_fish$rear_type_code) 
+table(methow_fish$release_site_name)
+table(methow_fish$run_year)
+table(subset(methow_fish, rear_type_code == "W")$run_year)
+
+# Okanogan
+okanogan_fish <- subset(adult_returns, release_site_subbasin_name == "Okanogan")
+table(okanogan_fish$rear_type_code) 
+table(okanogan_fish$run_year)
+
+# Trout
+trout_fish <- subset(adult_returns, release_site_subbasin_name == "Trout")
+table(trout_fish$rear_type_code) 
+table(trout_fish$run_year)
+
+deschutes_fish
+
+# Upper columbia, Priest rapids
+UCPA_fish <- subset(adult_returns, release_site_subbasin_name == "Upper Columbia-Priest Rapids")
+as.data.frame(table(UCPA_fish$release_site_name))
+# Ringold hatchery, right on the mainstem. Not a tributary
+
+# Upper Salmon and Little salmon are part of the Salmon
+
+# Middle Columbia - Hood
+MCH_fish <- subset(adult_returns, release_site_subbasin_name == "Middle Columbia-Hood")
+as.data.frame(table(MCH_fish$release_site_name))
+# Mostly Hood, also Fifteenmile (already covered). But Wind River and Trout Creek (trib to Wind River) might be a pop?
+
+wind_fish <- subset(adult_returns, release_site_name %in% c("WIND2R - Wind River, Washington", "TROUTC - Trout Creek (trib. to Wind River, Wash.)"))
+table(wind_fish$rear_type_code) # 1070 wild
+table(wind_fish$run_year)
+table(wind_fish$release_site_name)
+
+# Hells Canyon
+HC_fish <- subset(adult_returns, release_site_subbasin_name == "Hells Canyon")
+table(HC_fish$rear_type_code) 
+table(HC_fish$run_year)
+as.data.frame(table(HC_fish$release_site_name))
+
+# Lower Snake
+LS_fish <- subset(adult_returns, release_site_subbasin_name == "Lower Snake")
+table(LS_fish$rear_type_code) 
+table(LS_fish$run_year)
+as.data.frame(table(LS_fish$release_site_name))
+# No, all in mainstem of Snake
+
+# Lower Snake - Asotin
+LS_fish <- subset(adult_returns, release_site_subbasin_name == "Lower Snake-Asotin")
+table(LS_fish$rear_type_code) 
+table(LS_fish$run_year)
+as.data.frame(table(LS_fish$release_site_name))
+as.data.frame(table(subset(LS_fish, rear_type_code == "H")$release_site_name))
+as.data.frame(table(subset(LS_fish, rear_type_code == "W")$release_site_name))
+
+table(subset(LS_fish, rear_type_code == "W")$run_year)
+
+# Chief Joseph
+CJ_fish <- subset(adult_returns, release_site_subbasin_name == "Chief Joseph")
+table(CJ_fish$release_site_name)
+# All from Well's Hatchery, mainstem Columbia. 
+
+# Similkameen
+SK_fish <- subset(adult_returns, release_site_subbasin_name == "Similkameen")
+table(SK_fish$rear_type_code)  # Just hatchery
+table(SK_fish$run_year) # Not enough run years (only 8) - ignore
+
+# Middle Columbia-Lake Wallula
+wallula_fish <- subset(adult_returns, release_site_subbasin_name == "Middle Columbia-Lake Wallula")
+table(wallula_fish$run_year)
+table(wallula_fish$rear_type_code)
+table(wallula_fish$release_site_name)
+# Nope, mostly released in the mainstem
+```
+
+
+# PTAGIS - query all data
+
+### Get tag codes for all fish of interest
+
+The tributary systems that we want to query are:
+
+1. Fifteenmile Creek
+2. Deschutes River
+3. John Day River
+4. Umatilla River
+5. Walla Walla River
+6. Yakima River
+7. Wenatchee River
+8. Entiat River
+9. Tucannon River
+10. Clearwater River
+11. Grande Ronde River
+12. Salmon River
+13. Imnaha river
+14. Methow River
+15. Okanogan River
+16. Asotin Creek
+
+#### Determine release site names for each tributary
+```{r}
+# Get name of all unique release sites
+release_sites <- unique(adult_returns$release_site_name)
+
+# Get release sites that correspond to each tributary
+
+#  Fifteenmile Creek
+fifteenmile_creek_sites <- release_sites[grep("Fifteen", release_sites)]
+
+# Deschutes River
+deschutes_river_sites <- unique(subset(adult_returns, release_site_basin_name == "Deschutes")$release_site_name)
+
+# John Day River
+john_day_river_sites <- unique(subset(adult_returns, release_site_subbasin_name %in% c("Upper John Day", "North Fork John Day", "Middle Fork John Day", "Lower John Day"))$release_site_name)
+
+# Umatilla River
+umatilla_river_sites <- unique(subset(adult_returns, release_site_subbasin_name == "Umatilla")$release_site_name)
+
+# Walla Walla River
+walla_walla_river_sites <- unique(subset(adult_returns, release_site_subbasin_name == "Walla Walla")$release_site_name)
+
+# Yakima River
+yakima_river_sites <- unique(subset(adult_returns, release_site_basin_name == "Yakima")$release_site_name)
+
+# Wenatchee River
+wenatchee_river_sites <- unique(subset(adult_returns, release_site_subbasin_name == "Wenatchee")$release_site_name)
+
+# Entiat River
+entiat_river_sites <- release_sites[grep("Entiat", release_sites)]
+
+# Tucannon River
+tucannon_river_sites <- release_sites[grep("Tucannon", release_sites)]
+
+# Clearwater River
+clearwater_river_sites <- unique(subset(adult_returns, release_site_basin_name == "Clearwater")$release_site_name)
+
+# Grande Ronde River
+grande_ronde_river_sites <- unique(subset(adult_returns, release_site_subbasin_name %in% c("Lower Grande Ronde", "Upper Grande Ronde", "Wallowa"))$release_site_name)
+
+# Salmon River
+salmon_river_sites <- unique(subset(adult_returns, release_site_basin_name == "Salmon")$release_site_name)
+
+# Imnaha river
+imnaha_river_sites <- unique(subset(adult_returns, release_site_subbasin_name == "Imnaha")$release_site_name)
+
+# Methow River
+methow_river_sites <- unique(subset(adult_returns, release_site_subbasin_name == "Methow")$release_site_name)
+
+# Okanogan River
+okanogan_river_sites <- unique(subset(adult_returns, release_site_subbasin_name == "Okanogan")$release_site_name)
+
+# Asotin Creek
+asotin_creek_sites <- release_sites[grep("Asotin", release_sites)]
+```
+
+#### Export table of release sites + natal origin
+
+```{r}
+data.frame(natal_origin = c(
+  rep("Fifteenmile_Creek", length(fifteenmile_creek_sites)),
+  rep("Deschutes_River", length(deschutes_river_sites)),
+  rep("John_Day_River", length(john_day_river_sites)),
+  rep("Umatilla_River", length(umatilla_river_sites)),
+  rep("Walla_Walla_River", length(walla_walla_river_sites)),
+  rep("Yakima_River", length(yakima_river_sites)),
+  rep("Wenatchee_River", length(wenatchee_river_sites)),
+  rep("Entiat_River", length(entiat_river_sites)),
+  rep("Tucannon_River", length(tucannon_river_sites)),
+  rep("Clearwater_River", length(clearwater_river_sites)),
+  rep("Grande_Ronde_River", length(grande_ronde_river_sites)),
+  rep("Salmon_River", length(salmon_river_sites)),
+  rep("Imnaha_River", length(imnaha_river_sites)),
+  rep("Methow_River", length(methow_river_sites)),
+  rep("Okanogan_River", length(okanogan_river_sites)),
+  rep("Asotin_Creek", length(asotin_creek_sites))
+),
+release_site_name = c(
+                 fifteenmile_creek_sites, 
+                 deschutes_river_sites,
+                 john_day_river_sites,
+                 umatilla_river_sites,
+                 walla_walla_river_sites,
+                 yakima_river_sites,
+                 wenatchee_river_sites,
+                 entiat_river_sites,
+                 tucannon_river_sites,
+                 clearwater_river_sites,
+                 grande_ronde_river_sites,
+                 salmon_river_sites,
+                 imnaha_river_sites,
+                 methow_river_sites,
+                 okanogan_river_sites,
+                 asotin_creek_sites
+                 )) -> origin_table
+
+# Export the origin table
+write.csv(origin_table, here::here("Data", "covariate_data", "natal_origin_table.csv"), row.names = FALSE)
+```
+
+
+
+#### Get tag codes for all fish in river systems
+Here we will break these tag codes into files containing 5,000 unique tags. This will keep the complete tag history files under 100 MB so that they can be uploaded to GitHub, and should make PTAGIS smoother.
+```{r}
+adult_returns %>% 
+  subset(., release_site_name %in% c(fifteenmile_creek_sites, deschutes_river_sites, john_day_river_sites, umatilla_river_sites, walla_walla_river_sites, yakima_river_sites, wenatchee_river_sites, entiat_river_sites, tucannon_river_sites, clearwater_river_sites, grande_ronde_river_sites, salmon_river_sites, imnaha_river_sites, methow_river_sites, okanogan_river_sites, asotin_creek_sites)) -> adult_returns_for_analysis
+
+# Write tag codes to multiple text files
+as.data.frame(unique(adult_returns_for_analysis$tag_code)) -> unique_tags
+  
+    ntags <- length(unique_tags[,1])
+    nfiles <- ceiling(ntags/5000)
+    
+    # Make an empty list to store the different files
+    file_list <- list()
+    
+    # Split the tags into multiple files
+    for (i in 1:nfiles){
+      file_list[[i]] <- unique_tags[(1 + 5000 * (i - 1)):(5000 * i),1][!(is.na(unique_tags[(1 + 5000 * (i - 1)):(5000 * i),1]))]
+    }
+    
+    # export the files
+    for (i in 1:nfiles){
+      write.table(file_list[[i]], file = here::here("Data", "PTAGIS_queries", "tag_codes", paste0("tag_codes_", i, ".txt")), col.names = FALSE, row.names = FALSE, quote = FALSE) 
+    }
+```
+
+Next, these tag code files were used to run new queries on PTAGIS.
+
+From the [PTAGIS Dashboard](https://dashboard.ptagis.org): Advanced Reporting Home Page > Create Query Builder2 Report > Complete Tag History
+
+For each of these, the reports paste0("CTH_tag_codes_", 1:13, Date) were run. Those reports have the following settings:
+Query Builder2:
+- 1 Attributes: Tag, Event Type, Event Site, Event Date, Event Release Site, Event Release Date, (these first six are all standard, the rest you have to add manually),
+Event Date Time, Antenna, Antenna Group, Antenna Group Configuration
+- 2 Metrics: CTH Count
+- 29 Tag Code: Import text file that you exported from R
+
+Each file is exported as a CSV in Data/PTAGIS_queries/complete_tag_histories
+
+# Covariate queries
+To navigate to the appropriate page on [CBR DART](https://www.cbr.washington.edu/dart/query/basin_conditions_hist):
+
+Homepage > Basin conditions > Project all years
+
+For each of the following dams:
+
+- BON-Bonneville
+- IHR-Ice Harbor
+- LWG-Lower Granite
+- MCN-McNary
+- PRD-Priest Rapids
+- RIS-Rock Island
+- RRH-Rocky Reach
+- WEL-Wells
+
+Select each of the following data:
+
+- "Outflow KCFS, Daily Average"
+- "Spill KCFS, Daily Average"
+- "Temperature C, Daily Average"
+- "Temperature C, Tailrace, Daily Average"
+
+Download as CSV in Data/covariate_data/CBR_DART
+- Store in a folder with the dam abbreviation
+- Name files with paste0(dam, variable, query date)
