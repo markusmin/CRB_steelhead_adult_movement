@@ -1,6 +1,7 @@
 #### 03: create state histories
 
 # load libraries
+unloadNamespace("plyr")
 library(tidyverse)
 library(lubridate)
 library(here)
@@ -33,6 +34,13 @@ states_complete_part1 %>%
   bind_rows(., states_complete_part2) %>% 
   bind_rows(., states_complete_part3) %>% 
   bind_rows(., states_complete_part4) -> states_complete
+
+# Change all Hood River states to BON to MCN other tributaries - we don't care
+# about this tributary individually because we don't have any Hood River fish in our final model
+states_complete %>% 
+  mutate(state = ifelse(grepl("Hood River", state), 
+                        "BON to MCN other tributaries", state)) -> states_complete
+
 
 # Read in tag code metadata
 read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv")) -> tag_code_metadata
@@ -178,7 +186,7 @@ states_complete %>%
 states_complete %>% 
   subset(life_stage == "Adult") %>% 
   group_by(tag_code) %>% 
-  mutate(order_2 = row_number()) %>% 
+  dplyr::mutate(order_2 = row_number()) %>% 
   subset(order_2 == 1) -> first_adult_states
 
 table(first_adult_states$pathway)
@@ -197,7 +205,7 @@ tributary_mainstem <- data.frame(tributary = c("Asotin Creek",
                                                "Entiat River", 
                                                "Fifteenmile Creek", 
                                                "Grande Ronde River", 
-                                               "Hood River",
+                                               # "Hood River",
                                                "Imnaha River",
                                                "John Day River", 
                                                "Methow River", 
@@ -219,7 +227,7 @@ mainstem = c("mainstem, upstream of LGR",
              "mainstem, RRE to WEL",
              "mainstem, BON to MCN",
              "mainstem, upstream of LGR",
-             "mainstem, BON to MCN",
+             # "mainstem, BON to MCN",
              "mainstem, upstream of LGR",
              "mainstem, BON to MCN",
              "mainstem, upstream of WEL",
@@ -661,7 +669,7 @@ origin_numeric <- data.frame(natal_origin = c("Asotin_Creek",
                                               "Entiat_River", 
                                               "Fifteenmile_Creek", 
                                               "Grande_Ronde_River", 
-                                              "Hood_River",
+                                              # "Hood_River",
                                               "Imnaha_River",
                                               "John_Day_River", 
                                               "Methow_River", 
@@ -672,7 +680,7 @@ origin_numeric <- data.frame(natal_origin = c("Asotin_Creek",
                                               "Walla_Walla_River",
                                               "Wenatchee_River", 
                                               "Yakima_River"),
-                             natal_origin_numeric = seq(1,17,1))
+                             natal_origin_numeric = seq(1,16,1))
 
 tag_code_metadata %>% 
   left_join(., origin_numeric, by = "natal_origin") %>% 
