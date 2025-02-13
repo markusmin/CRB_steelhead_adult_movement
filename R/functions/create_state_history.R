@@ -11,7 +11,7 @@
 # that must be visited when going from one state to another
 
 # For computational reasons, this function is set up to run 1/4 of the dataset
-# through at one time - this happens on line 969 (where the argument data_quartile is used)
+# through at one time - this happens on line 1047 (where the argument data_quartile is used)
 
 ### Load libraries
 # library(here)
@@ -24,24 +24,28 @@ create_state_history <- function(data_quartile){
   # load and reformat interrogation sites data from PTAGIS
   complete_event_site_metadata <- read.csv("Data/All Interrogation Sites Table 2025-01-30.csv")
   complete_event_site_metadata %>% 
+    # drop any sites that weren't operational during our time period
+    mutate(Int.Site.End.Date = mdy(Int.Site.End.Date)) %>% 
+    filter(Int.Site.End.Date >= ymd("2005-06-01") | is.na(Int.Site.End.Date)) %>% 
+    # Drop any sites that aren't in the Columbia River Basin
+    filter(Interrogation.Site.Subbasin.Name != "Skokomish") %>% 
+    filter(Interrogation.Site.Basin.Name != "Puget Sound") %>% 
     mutate(Interrogation.Site.Long.Name = paste0(Interrogation.Site.Code, " - ", Interrogation.Site.Name)) %>% 
+    # drop this random guy
+    filter(Interrogation.Site.Long.Name != "ZZ1 - Noise Test Site 1") %>% 
+    # drop what look to be data entry errors
+    filter(!(Interrogation.Site.Long.Name %in% c("NQD - ", "TRB - ", "WFL - ", "WFU - "))) %>% 
     dplyr::rename(event_site_name = "Interrogation.Site.Long.Name",
                   event_site_basin_name = "Interrogation.Site.Basin.Name",
                   event_site_subbasin_name = "Interrogation.Site.Subbasin.Name") %>% 
-    dplyr::select(event_site_name, event_site_basin_name, event_site_subbasin_name) %>% 
+    dplyr::select(event_site_name, event_site_basin_name, event_site_subbasin_name, Interrogation.Site.Location.RKM) %>% 
     # remove duplicated rows
     distinct(event_site_name, .keep_all = TRUE)-> complete_event_site_metadata
   
   ##### Assign detection sites to parts of river ####
   
   ##### Dams in order - separate Columbia and Snake #####
-  columbia_dams <- c("Bonneville Adult Fishways (combined)", "McNary Adult Fishways (combined)", 
-                     "Priest Rapids Adult Fishways (combined)","Rock Island Adult Fishways (combined)", 
-                     "RRF - Rocky Reach Fishway", "Wells Dam Adult Fishways (combined)")
-  snake_dams <- c("Ice Harbor Adult Fishways (combined)",  "Lower Granite Dam Adult Fishways (combined)")
-  
-  
-  # new with v3 - group dam ascents together here
+  # group dam ascents together here
   BON_adult <- c("BO1 - Bonneville Bradford Is. Ladder",
                  # "BO2 - Bonneville Cascades Is. Ladder", "BO3 - Bonneville WA Shore Ladder/AFF",
                  # "BO4 - Bonneville WA Ladder Slots", "BONAFF - BON - Adult Fish Facility",
@@ -59,23 +63,32 @@ create_state_history <- function(data_quartile){
   
   ##### Tributary detection sites
   
+  # First, look at the basin/subbasin level, and then inspect each of the ones that were selected and drop
+  # those that don't actually belong to that tributary; use RKM as a first place to start
+  
   # Natal tributary detection sites
   # Here, we need lists of tributary detection sites for each of the natal origins
   
   # Asotin Creek
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Lower Snake-Asotin") %>%  # asotin creek (Tenmile Creek is not a tributary to Asotin Creek)
-    subset(., event_site_name != "TENMC2 - Tenmile Creek, tributary to Snake River") -> ASO_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Lower Snake-Asotin") %>%
+    # COU - Couse Creek Near Mouth
+    # SNJ - Snake River Trap
+    filter(., !(event_site_name %in% c("COU - Couse Creek Near Mouth",
+                                       "SNJ - Snake River Trap"))) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> ASO_sites_df
   # split into RM site and other sites
   ASO_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "ACM - Asotin Creek near mouth", "ASO_RM", "ASO_upstream")) -> ASO_sites_df
   
   
   # Clearwater River
-  subset(complete_event_site_metadata, event_site_basin_name == "Clearwater") -> CLE_sites_df
+  subset(complete_event_site_metadata, event_site_basin_name == "Clearwater") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> CLE_sites_df
   # no river mouth site
   
   # Deschutes River
-  subset(complete_event_site_metadata, event_site_basin_name == "Deschutes") -> DES_sites_df
+  subset(complete_event_site_metadata, event_site_basin_name == "Deschutes") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> DES_sites_df
   # split into RM site and other sites
   DES_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "DRM - Deschutes River mouth", "DES_RM", "DES_upstream")) -> DES_sites_df
@@ -88,7 +101,9 @@ create_state_history <- function(data_quartile){
     filter(!grepl("RIA", event_site_name)) %>% 
     filter(!grepl("Rock Island", event_site_name)) %>% 
     filter(!grepl("RIS", event_site_name)) %>% 
-    filter(!grepl("EBO", event_site_name)) -> ENT_sites_df
+    filter(!grepl("EBO", event_site_name)) %>% 
+    filter(!grepl("WAJ", event_site_name)) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> ENT_sites_df
   # split into RM site and other sites
   ENT_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "ENL - Lower Entiat River", "ENT_RM", "ENT_upstream")) -> ENT_sites_df
@@ -98,64 +113,75 @@ create_state_history <- function(data_quartile){
   subset(complete_event_site_metadata, event_site_name %in% complete_event_site_metadata$event_site_name[grep("Fifteenmile", complete_event_site_metadata$event_site_name)]) -> FIF_sites_df
   # split into RM site and other sites
   FIF_sites_df %>% 
-    mutate(trib_site = ifelse(event_site_name == "158 - Fifteenmile Ck at Eightmile Ck", "FIF_RM", "FIF_upstream")) -> FIF_sites_df
+    mutate(trib_site = ifelse(event_site_name == "158 - Fifteenmile Ck at Eightmile Ck", "FIF_RM", "FIF_upstream")) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> FIF_sites_df
   
   # Grande Ronde River
-  subset(complete_event_site_metadata, event_site_subbasin_name %in% c("Lower Grande Ronde", "Upper Grande Ronde", "Wallowa")) -> GRRO_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name %in% c("Lower Grande Ronde", "Upper Grande Ronde", "Wallowa")) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> GRRO_sites_df
   
   # Hood River
   subset(complete_event_site_metadata, event_site_name %in%
            c(complete_event_site_metadata$event_site_name[grep("Hood", complete_event_site_metadata$event_site_name)],
              "EFD - East Fork Diversion Fishway", "PARK - Parkdale Hatchery",
-             "MVF - Moving Falls Fish Ladder", "SND - Sandtrap Acclimation Site")) -> HOOD_sites_df
+             "MVF - Moving Falls Fish Ladder", "SND - Sandtrap Acclimation Site")) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> HOOD_sites_df
   # split into RM site and other sites
   HOOD_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "HRM - Hood River Mouth", "HOOD_RM", "HOOD_upstream")) -> HOOD_sites_df
   
   # Imnaha River
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Imnaha") -> IMN_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Imnaha") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> IMN_sites_df
   # split into RM site and other sites
   IMN_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "IR1 - Lower Imnaha River ISA @ km 7", "IMN_RM", "IMN_upstream")) -> IMN_sites_df
   
   # John Day River
   subset(complete_event_site_metadata, event_site_subbasin_name %in% 
-           c("Upper John Day", "North Fork John Day", "Middle Fork John Day", "Lower John Day")) -> JDR_sites_df
+           c("Upper John Day", "North Fork John Day", "Middle Fork John Day", "Lower John Day")) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> JDR_sites_df
   # split into RM site and other sites
   JDR_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "JD1 - John Day River, McDonald Ferry", "JDR_RM", "JDR_upstream")) -> JDR_sites_df
   
   # Methow River
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Methow") -> MET_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Methow") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM)-> MET_sites_df
   # split into RM site and other sites
   MET_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "LMR - Lower Methow River at Pateros", "MET_RM", "MET_upstream")) -> MET_sites_df
   
   # Okanogan River
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Okanogan") -> OKA_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Okanogan") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> OKA_sites_df
   # split into RM site and other sites
   OKA_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "OKL - Lower Okanogan Instream Array", "OKA_RM", "OKA_upstream")) -> OKA_sites_df
   
   # Salmon River
-  subset(complete_event_site_metadata, event_site_basin_name == "Salmon") -> SAL_sites_df 
+  subset(complete_event_site_metadata, event_site_basin_name == "Salmon") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM)-> SAL_sites_df 
   
   # Tucannon River
   subset(complete_event_site_metadata, event_site_name %in%
            c(complete_event_site_metadata$event_site_name[grep("Tucannon", complete_event_site_metadata$event_site_name)],
-             "CURP (Curl Lake Rearing Pond)")) -> TUC_sites_df
+             "CURP (Curl Lake Rearing Pond)")) %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM)-> TUC_sites_df
   # split into RM site and other sites
   TUC_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "LTR - Lower Tucannon River", "TUC_RM", "TUC_upstream")) -> TUC_sites_df
   
   # Umatilla River
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Umatilla") -> UMA_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Umatilla") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> UMA_sites_df
   # split into RM site and other sites
   UMA_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "TMF - Three Mile Falls Dam Combined", "UMA_RM", "UMA_upstream")) -> UMA_sites_df
   
   # Walla Walla River
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Walla Walla") -> WAWA_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Walla Walla") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> WAWA_sites_df
   # split into RM site and other sites
   # Walla Walla is weird because it's had three different river mouth sites over time
   WAWA_sites_df %>% 
@@ -163,18 +189,21 @@ create_state_history <- function(data_quartile){
                                                      "ORB - Oasis Road Bridge"), "WAWA_RM", "WAWA_upstream")) -> WAWA_sites_df
   
   # Wenatchee River
-  subset(complete_event_site_metadata, event_site_subbasin_name == "Wenatchee") -> WEN_sites_df
+  subset(complete_event_site_metadata, event_site_subbasin_name == "Wenatchee") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> WEN_sites_df
   # split into RM site and other sites
   WEN_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "LWE - Lower Wenatchee River", "WEN_RM", "WEN_upstream")) -> WEN_sites_df
   
   # Yakima River
-  subset(complete_event_site_metadata, event_site_basin_name == "Yakima") -> YAK_sites_df # Yakima River
+  subset(complete_event_site_metadata, event_site_basin_name == "Yakima") %>% 
+    dplyr::select(-Interrogation.Site.Location.RKM) -> YAK_sites_df # Yakima River
   # split into RM site and other sites
   YAK_sites_df %>% 
     mutate(trib_site = ifelse(event_site_name == "PRO - Prosser Diversion Dam Combined", "YAK_RM", "YAK_upstream")) -> YAK_sites_df
   
-  # combine these into one DF to store all of the tributaries that we are interested in - everything else will just be "other tributaries", sorted by reach
+  # combine these into one DF to store all of the tributaries that we are interested in 
+  # - everything else will just be "other tributaries", sorted by reach
   ASO_sites_df %>% 
     bind_rows(., CLE_sites_df) %>% 
     bind_rows(., DES_sites_df) %>% 
@@ -266,6 +295,28 @@ create_state_history <- function(data_quartile){
   # Approach: Subset by basin/subbasin, take out dams and the inriver sites (when applicable), take out the origin sites
   # Use the PTAGIS map to figure this out
   
+  # Straying sites before BON:
+  pre_BON_other_trib_sites_df <- subset(complete_event_site_metadata, 
+                                        grepl("Abernathy Creek", event_site_name) | 
+                                          event_site_subbasin_name %in% c("Mckenzie") |
+                                          event_site_basin_name %in% c("Willamette") |
+                                          event_site_name %in% c("CFD - Cowlitz Falls Dam",
+                                                                 "CR1 - Chinook River Sea Resources CF",
+                                                                 "CR2 - Chinook River HWY 101 Bridge",
+                                                                 "CR3 - Chinook River at Culvert",
+                                                                 "CSH - Cowlitz Salmon Hatchery Ladder",
+                                                                 "DXP - Dexter Ponds Fish Ladder",
+                                                                 "GM1 - Lower Germany Creek",
+                                                                 "KAL - Kalama River Instream Array",
+                                                                 "LRH - Lewis River Hatchery Returns",
+                                                                 "MHP - Merwin Hydroeletric Project",
+                                                                 "ML1 - Lower Mill Creek (MILL4C)",
+                                                                 "SHP - Swift Hydroelectric Project",
+                                                                 "WRP - Woodland Release Ponds"))
+  
+  pre_BON_other_trib_sites <- pre_BON_other_trib_sites_df$event_site_name
+  
+  
   # Straying sites between BON and MCN:
   # subbasins: Middle Columbia-Hood, Umatilla, Middle Columbia-Lake Wallula, Willow, Lower John Day, Lower Deschutes, Trout, Upper Deschutes, 
   # Lower Crooked, Upper Crooked, Little Deschutes, Beaver-South Fork, North Fork John Day, Middle Fork John Day, Upper John Day, Klickitat
@@ -306,7 +357,8 @@ create_state_history <- function(data_quartile){
   ICH_LGR_other_trib_sites_df <- subset(complete_event_site_metadata, 
                                         event_site_subbasin_name %in% c("Palouse") |
                                           event_site_name %in% c("ALMOTC - Almota Creek - tributary to Snake River",
-                                                                 "PENAWC - Penawawa Creek - tributary to Snake River"))
+                                                                 "PENAWC - Penawawa Creek - tributary to Snake River",
+                                                                 "PWA - Penawawa Creek"))
   
   ICH_LGR_other_trib_sites <- ICH_LGR_other_trib_sites_df$event_site_name
   
@@ -322,7 +374,8 @@ create_state_history <- function(data_quartile){
                                                                              "Upper Middle Fork Salmon", "Middle Salmon-Panther", "Pahsimeroi", "Lemhi") & 
                                                !(event_site_name %in% origin_sites) |
                                                event_site_name %in% c("ALPOWC - Alpowa Creek, lower Snake River",
-                                                                      "TENMC2 - Tenmile Creek, tributary to Snake River"
+                                                                      "TENMC2 - Tenmile Creek, tributary to Snake River",
+                                                                      "COU - Couse Creek Near Mouth"
                                                ) &
                                                !(event_site_name %in% origin_sites))
   
@@ -363,7 +416,10 @@ create_state_history <- function(data_quartile){
   # edit 2022-08-11: adding a new category for aborted ascents at BON. This will allow us to better ID BON arrival
   pre_BON_inriver <- c("ESANIS - East Sand Island, Columbia River", "TWX - Estuary Towed Array (Exp.)",
                        "BONH - Bonneville Hatchery","PD7 - Columbia River Estuary rkm 70",
-                       "BHL - Adult Fishway at BONH")
+                       "BHL - Adult Fishway at BONH", "CCC - Carrolls Channel, Lwr Col Riv",
+                       "CIC - Cottonwood Island, Lwr Col Rvr", "ESX - Estuary Saltwater Experiment",
+                       "MEG - Megler Cr.-Col. R. Estuary", "PD5 - Columbia River Estuary rkm 62",
+                       "PD6 - Columbia River Estuary rkm 68", "PD8 - Columbia River Estuary rkm 82")
   
   BON_aborted <- c("BO1 - Bonneville Bradford Is. Ladder - ABORTED", "BO2-BO3-BO4 - ABORTED")
   
@@ -399,9 +455,11 @@ create_state_history <- function(data_quartile){
   
   upstream_WEL_inriver <- c("CHJO - Chief Joseph Hatchery", "OXBO - Oxbow Hatchery (IDFG)",
                             "COLR8 - Columbia River - Chelan Falls, WA to Grand Coulee Dam (km 809-960)",
-                            "WELFBY - WEL - Release into the Forebay within 0.5 km upstream of Dam")
+                            "WELFBY - WEL - Release into the Forebay within 0.5 km upstream of Dam",
+                            "CJH - Chief Joseph Hatchery Ladder", "CJP - CJH Juvenile Release Pond")
   
-  upstream_LGR_inriver <- c("SNAKE4 - Snake River - Salmon River to Hells Canyon Dam (km 303-397)")
+  upstream_LGR_inriver <- c("SNAKE4 - Snake River - Salmon River to Hells Canyon Dam (km 303-397)",
+                            "SNJ - Snake River Trap")
   
   
   ##### Trap sites #####
@@ -422,17 +480,25 @@ create_state_history <- function(data_quartile){
   
   # Confirm that all sites have been categorized
   setdiff(complete_event_site_metadata$event_site_name, 
-          c(columbia_dams, snake_dams, # Adult fishways at dams
-            origin_sites, # Natal origins
+          c(BON_adult, MCN_adult, PRA_adult, RIS_adult, # Adult fishways in dams
+            RRE_adult, WEL_adult, ICH_adult, LGR_adult, # Adult fishways at dams
+            origin_sites, # sites within tributaries that are states in our model
+            pre_BON_other_trib_sites, # Other tributary sites
             LGR_upstream_other_trib_sites, ICH_LGR_other_trib_sites, # Other tributary sitses
             BON_MCN_other_trib_sites, WEL_upstream_other_trib_sites, # Other tributary sites continued
-            pre_BON_inriver, BON_aborted, BON_MCN_inriver, MCN_ICH_PRA_inriver, ICH_LGR_inriver, 
+            pre_BON_inriver, BON_aborted, BON_MCN_inriver, MCN_ICH_PRA_inriver, ICH_LGR_inriver,
             upstream_WEL_inriver, RRE_WEL_inriver, upstream_LGR_inriver, #in river arrays
-            BON_fallback_arrays, MCN_fallback_arrays, ICH_fallback_arrays, LGR_fallback_arrays, 
+            WEL_trap_arrays, # trap sites
+            BON_fallback_arrays, MCN_fallback_arrays, ICH_fallback_arrays, LGR_fallback_arrays,
             RIS_fallback_arrays, RRE_fallback_arrays, WEL_fallback_arrays)) # fallback arrays
   
-  
-  
+  # Remaining ones: BO2, BO3, and BO4 (fine, because these are all processed into the new site BO2-BO3-BO4)
+  # ICH - Ice Harbor Dam (Combined) -> was split by 02 script step into multiple passage routes
+  # PRA - Priest Rapids Adult -> was split by 02 script step into multiple passage routes
+  # RIA - Rock Island Adult -> was split by 02 script step into multiple passage routes
+  # TD1 - The Dalles East Fish Ladder and TD2 - The Dalles North Fish Ladder
+  # -> combined into The Dalles Adult Fishways (combined) by 02 script step
+  # WEA - Wells Dam, DCPUD Adult Ladders -> was split by 02 script step into multiple passage routes
   
   # Turn this into a dataframe (this was a silly way to do this)
   site_classification <- data.frame(event_site_name = c(BON_adult, MCN_adult, PRA_adult, RIS_adult,
@@ -468,6 +534,7 @@ create_state_history <- function(data_quartile){
                                                         WEN_RM_site, WEN_upstream_sites,
                                                         # YAK_sites,
                                                         YAK_RM_site, YAK_upstream_sites,
+                                                        pre_BON_other_trib_sites,
                                                         LGR_upstream_other_trib_sites, ICH_LGR_other_trib_sites, # other trib sites
                                                         BON_MCN_other_trib_sites, WEL_upstream_other_trib_sites,
                                                         pre_BON_inriver, BON_aborted, BON_MCN_inriver, MCN_ICH_PRA_inriver, ICH_LGR_inriver, #in river arrays
@@ -519,6 +586,7 @@ create_state_history <- function(data_quartile){
                                       rep("WEN_RM", length(WEN_RM_site)), rep("WEN_upstream", length(WEN_upstream_sites)),
                                       # rep("YAK_sites", length(YAK_sites)),
                                       rep("YAK_RM", length(YAK_RM_site)), rep("YAK_upstream", length(YAK_upstream_sites)),
+                                      rep("pre_BON_other_trib_sites", length(pre_BON_other_trib_sites)),
                                       rep("LGR_upstream_other_trib_sites", length(LGR_upstream_other_trib_sites)),
                                       rep("ICH_LGR_other_trib_sites", length(ICH_LGR_other_trib_sites)),
                                       rep("BON_MCN_other_trib_sites", length(BON_MCN_other_trib_sites)),
@@ -699,6 +767,8 @@ create_state_history <- function(data_quartile){
                                                                     ifelse(
                                                                       
                                                                       # Other tributaries
+                                                                      site_class == "pre_BON_other_trib_sites", "Pre BON other tributaries",
+                                                                      ifelse(
                                                                       site_class == "LGR_upstream_other_trib_sites", "Upstream LGR other tributaries",
                                                                       ifelse(
                                                                         site_class == "ICH_LGR_other_trib_sites", "ICH to LGR other tributaries",
@@ -706,9 +776,14 @@ create_state_history <- function(data_quartile){
                                                                           site_class == "BON_MCN_other_trib_sites", "BON to MCN other tributaries",
                                                                           ifelse(
                                                                             site_class == "WEL_upstream_other_trib_sites", "Upstream WEL other tributaries",
-                                                                            state)))))))))))))))))))))))))))))))))))) -> site_classification
+                                                                            state))))))))))))))))))))))))))))))))))))) -> site_classification
   
   
+  
+  # Treat pre-BON tributaries and pre-BON mainstem the same; this will simplify modeling,
+  # and pre-BON tributary visits aren't observed
+  site_classification %>% 
+    mutate(site_class = ifelse(site_class == "pre_BON_other_trib_sites", "pre_BON_inriver", site_class)) -> site_classification
   
   
   # Export site classification
@@ -1043,7 +1118,7 @@ create_state_history <- function(data_quartile){
                                 state = character(),
                                 date_time = as.POSIXct(character()),
                                 pathway = character())
-  # This tag code 384.1B796A520E is rows 780 - 795 of det hist
+
   for (i in 1:round(1.5 * nrow(det_hist), 0)) {
     print(paste0("Row #", i))
     if (fish_counter > nfish){
