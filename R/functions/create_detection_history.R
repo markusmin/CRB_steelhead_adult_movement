@@ -139,6 +139,13 @@ create_detection_history <- function(file_paths){
   WEA_170_left_trap <- c("09", "0A")
   WEA_170_right_trap <- c("B1", "B2", "B3")
   
+  WEA_180_left_upper <- c("01", "02", "03", "04")
+  WEA_180_left_lower <- c("A1", "A2")
+  WEA_180_right_upper <- c("05", "06", "07", "08")
+  WEA_180_right_lower <- c("A3", "A4")
+  WEA_180_left_trap <- c("09", "0A")
+  WEA_180_right_trap <- c("B1", "B2", "B3")
+  
   ICH_100_north_ladder <- c("09", "0A", "0B", "0C", "0D", "0E", "0F", "10")
   ICH_100_south_ladder <- c("01", "02", "03", "04", "05", "06", "07", "08")
   ICH_100_bypass <- c("A1", "A2", "A3", "A4")
@@ -173,7 +180,8 @@ create_detection_history <- function(file_paths){
                 WEA_140_left_upper, WEA_140_left_lower, WEA_140_left_trap,
                 WEA_150_left_upper, WEA_150_left_lower, WEA_150_left_trap,
                 WEA_160_left_upper, WEA_160_left_lower, WEA_160_left_trap,
-                WEA_170_left_upper, WEA_170_left_lower, WEA_170_left_trap)
+                WEA_170_left_upper, WEA_170_left_lower, WEA_170_left_trap,
+                WEA_180_left_upper, WEA_180_left_lower, WEA_180_left_trap)
   
   WEL_right <- c(WEA_110_right, WEA_110_right_trap,
                  WEA_120_right, WEA_120_right_trap,
@@ -181,12 +189,15 @@ create_detection_history <- function(file_paths){
                  WEA_140_right_upper, WEA_140_right_lower, WEA_140_right_trap,
                  WEA_150_right_upper, WEA_150_right_lower, WEA_150_right_trap,
                  WEA_160_right_upper, WEA_160_right_lower, WEA_160_right_trap, WEA_160_right_AFF,
-                 WEA_170_right_upper, WEA_170_right_lower, WEA_170_right_trap)
+                 WEA_170_right_upper, WEA_170_right_lower, WEA_170_right_trap,
+                 WEA_180_right_upper, WEA_180_right_lower, WEA_180_right_trap)
   
   WEA_traps <- unique(c(WEA_110_left_trap, WEA_120_left_trap, WEA_130_left_trap, 
-                        WEA_140_left_trap, WEA_150_left_trap, WEA_160_left_trap, WEA_170_left_trap,
+                        WEA_140_left_trap, WEA_150_left_trap, WEA_160_left_trap, 
+                        WEA_170_left_trap, WEA_180_left_trap,
                         WEA_110_right_trap, WEA_120_right_trap, WEA_130_right_trap, 
-                        WEA_140_right_trap, WEA_150_right_trap, WEA_160_right_trap, WEA_160_right_AFF, WEA_170_right_trap))
+                        WEA_140_right_trap, WEA_150_right_trap, WEA_160_right_trap, 
+                        WEA_160_right_AFF, WEA_170_right_trap, WEA_180_right_trap))
   
   
   
@@ -226,9 +237,9 @@ create_detection_history <- function(file_paths){
   
   # Add run year info
   # Add run year info
-  run_year <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21", "21/22")
-  run_year_start <- seq(ymd("2005-06-01"), ymd("2021-06-01"), by = "years")
-  run_year_end <- seq(ymd("2006-05-31"), ymd("2022-05-31"), by = "years")
+  run_year <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21", "21/22", "22/23", "23/24")
+  run_year_start <- seq(ymd("2005-06-01"), ymd("2023-06-01"), by = "years")
+  run_year_end <- seq(ymd("2006-05-31"), ymd("2024-05-31"), by = "years")
   
   run_year_df <- data.frame(run_year, run_year_start, run_year_end)
   
@@ -1980,9 +1991,9 @@ create_detection_history <- function(file_paths){
             
           }
           
-          # antenna configs 140, 150, 160, and 170 all have antennas in the lower ladder
+          # antenna configs 140, 150, 160, 170, and 180 all have antennas in the lower ladder
           # they're functionally the same
-          else if (tag_hist[j, "ant_config"] %in% c(140, 150, 160, 170)){
+          else if (tag_hist[j, "ant_config"] %in% c(140, 150, 160, 170, 180)){
             # If the next detection is at a different site, or is more than 48 hours later, store the current time as the end time
             if (!(tag_hist[j+1, 'antenna_id'] %in% WEL_left) | # If it's at a different site
                 tag_hist[j+1, 'event_date_time_value'] - 
@@ -2015,7 +2026,8 @@ create_detection_history <- function(file_paths){
               
               # Now, if it was only seen in the lower ladder but not the exit coils, (and wasn't first seen in the exit coils) call it aborted
               if (tag_hist[j, 'antenna_id'] %in% c(WEA_140_left_lower, WEA_150_left_lower,
-                                                   WEA_160_left_lower, WEA_170_left_lower) &
+                                                   WEA_160_left_lower, WEA_170_left_lower,
+                                                   WEA_180_left_lower) &
                   !(ind_det_hist[counter,'start_antenna_id'] %in% c(WEA_170_left_upper))){ # the names of these coils didn't change, so just need one config
                 
                 ind_det_hist[counter,'non_ascent'] <- "aborted"
@@ -2023,7 +2035,8 @@ create_detection_history <- function(file_paths){
               
               # Other alternative - if the first detection was at an exit coil, and the last at an entrance coil, then it went downstream through the ladder
               else if (tag_hist[j, 'antenna_id'] %in% c(WEA_140_left_lower, WEA_150_left_lower,
-                                                        WEA_160_left_lower, WEA_170_left_lower) & 
+                                                        WEA_160_left_lower, WEA_170_left_lower,
+                                                        WEA_180_left_lower) & 
                        ind_det_hist[counter,'start_antenna_id'] %in% WEA_170_left_upper){
                 ind_det_hist[counter,'non_ascent'] <- "descent"
               }
@@ -2121,9 +2134,9 @@ create_detection_history <- function(file_paths){
             
           }
           
-          # antenna configs 130, 140, 150, 160, and 170 all have antennas in the lower ladder
+          # antenna configs 130, 140, 150, 160, 170, and 180 all have antennas in the lower ladder
           # they're functionally the same
-          else if (tag_hist[j, "ant_config"] %in% c(130, 140, 150, 160, 170)){
+          else if (tag_hist[j, "ant_config"] %in% c(130, 140, 150, 160, 170, 180)){
             # If the next detection is at a different site, or is more than 48 hours later, store the current time as the end time
             if (!(tag_hist[j+1, 'antenna_id'] %in% WEL_right) | # If it's at a different site
                 tag_hist[j+1, 'event_date_time_value'] - 
@@ -2156,7 +2169,7 @@ create_detection_history <- function(file_paths){
               
               # Now, if it was only seen in the lower ladder but not the exit coils, (and wasn't first seen in the exit coils) call it aborted
               if (tag_hist[j, 'antenna_id'] %in% c(WEA_130_right_lower, WEA_140_right_lower, WEA_150_right_lower,
-                                                   WEA_160_right_lower, WEA_170_right_lower) &
+                                                   WEA_160_right_lower, WEA_170_right_lower, WEA_180_right_lower) &
                   !(ind_det_hist[counter,'start_antenna_id'] %in% c(WEA_170_right_upper))){ # the names of these coils didn't change, so just need one config
                 
                 ind_det_hist[counter,'non_ascent'] <- "aborted"
@@ -2164,7 +2177,7 @@ create_detection_history <- function(file_paths){
               
               # Other alternative - if the first detection was at an exit coil, and the last at an entrance coil, then it went downstream through the ladder
               else if (tag_hist[j, 'antenna_id'] %in% c(WEA_130_right_lower, WEA_140_right_lower, WEA_150_right_lower,
-                                                        WEA_160_right_lower, WEA_170_right_lower) & 
+                                                        WEA_160_right_lower, WEA_170_right_lower, WEA_180_right_lower) & 
                        ind_det_hist[counter,'start_antenna_id'] %in% WEA_170_right_upper){
                 ind_det_hist[counter,'non_ascent'] <- "descent"
               }
