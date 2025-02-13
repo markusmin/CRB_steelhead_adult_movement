@@ -5,14 +5,23 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r load_libraries, echo = FALSE, warning = FALSE, message = FALSE}
-library(plyr)
+```{r load_libraries_data, echo = FALSE, warning = FALSE, message = FALSE}
 library(tidyverse)
 library(here)
 library(lubridate)
 library(janitor)
 library(kableExtra)
 library(ggrepel)
+library(cmdstanr)
+library(bayesplot)
+library(posterior)
+
+# DO NOT load plyr - it will cause numerous naming conflicts with dplyr and basically break anything.
+# Instead, just copy the source code for any specific functions that we need.
+round_any = function(x, accuracy, f=round){f(x/ accuracy) * accuracy}
+
+# load detection history data that we'll need to calculate tributary detection efficiency
+det_hist <- read.csv(here::here("intermediate_outputs", "complete_det_hist_postprocessed.csv"), row.names = 1)
 ```
 
 ```{r define_functions, echo = FALSE, warning = FALSE, message = FALSE}
@@ -22,6 +31,141 @@ run_year_start <- seq(ymd_hms("2004-06-01 00:00:00"), ymd_hms("2024-06-01 00:00:
 run_year_end <- seq(ymd_hms("2005-05-31 23:59:59"), ymd_hms("2025-05-31 23:59:59"), by = "years")
 
 run_year_df <- data.frame(run_year, run_year_start, run_year_end)
+
+# load site classifications
+site_classification <- read.csv(here::here("intermediate_outputs", "site_classification.csv"), row.names = 1)
+# read in the interrogation sites table
+interrogation_sites <- read.csv(here::here("Data", "All Interrogation Sites Table 2025-01-30.csv"))
+interrogation_sites %>% 
+  mutate(Interrogation.Site.Long.Name = paste0(Interrogation.Site.Code, " - ", Interrogation.Site.Name)) %>% 
+  dplyr::rename(event_site_name = Interrogation.Site.Long.Name) -> interrogation_sites
+
+# join the two tables
+site_classification %>% 
+  left_join(., interrogation_sites, by = "event_site_name") -> site_classification
+
+show_trib_sites <- function(tributary_name){
+  site_classification %>% 
+    filter(grepl(tributary_name, state)) %>% 
+    dplyr::select(event_site_name, Int.Site.Start.Date,Int.Site.End.Date,Interrogation.Site.Location.RKM) %>% 
+    # sort by RKM to identify most downstream
+    arrange(Interrogation.Site.Location.RKM) -> trib_site_info
+  
+  return(trib_site_info)
+}
+
+# function to load data
+usgs_data_load <- function(variables, tributary_name, usgs_file_name){
+  if(variables == "discharge only") {
+    usgs_headers <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 28, header = F, nrows = 1, as.is = T, sep = "\t")
+    usgs <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 30, header = F, sep = "\t")
+    colnames(usgs) <- usgs_headers
+    
+    if (tributary_name == "Imnaha River"){
+      # drop the time zone column
+      usgs %>% 
+        dplyr::select(-tz_cd) -> usgs
+    }
+    
+    
+    # edit column names and drop irrelevant ones
+    colnames(usgs) <- c("agency", "site_no", "date_time", "discharge_cfs", "discharge_cfs_approved")
+    
+    # If it's the imnaha, it's reported every 15 minutes. We want just the daily; remove the time
+    if (tributary_name == "Imnaha River"){
+      usgs %>% 
+        mutate(date_time =substr(date_time, start = 1, stop = 10)) -> usgs
+    }
+    
+    usgs %>% 
+      dplyr::select("date_time", "discharge_cfs") %>% 
+      mutate(discharge_cfs = as.numeric(discharge_cfs)) %>% 
+      dplyr::mutate(date_time = ymd(date_time)) %>% 
+      dplyr::mutate(month = month(date_time)) %>% 
+      dplyr::mutate(year = year(date_time))-> usgs
+    
+    # summarise into monthly averages
+    usgs %>% 
+      group_by(year,month) %>% 
+      dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+      dplyr::mutate(year_month = ymd(paste(year, month,"01",sep="-")))-> monthly_discharge
+    
+    # calculate annual (run year) averages
+    usgs %>% 
+      rowwise() %>%
+      dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date_time & run_year_end >= date_time)$run_year) %>% 
+      subset(!(run_year %in% c("04/05", "24/25"))) %>% 
+      group_by(run_year) %>% 
+      dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+      dplyr::mutate(year_month = ymd(paste(substr(run_year, start = 4, stop = 5),"01-01",sep="-"))) %>% 
+      # add a line to paste tributary name
+      mutate(tributary = tributary_name) %>% 
+      # drop the year_month column
+      dplyr::select(-year_month) -> annual_discharge
+    
+    # return data for stan model
+    
+    return(annual_discharge)
+    
+    
+  } else{
+    usgs_headers <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 30, header = F, nrows = 1, as.is = T, sep = "\t")
+    usgs <- read.table(here::here("Data", "tributary_data", "USGS", usgs_file_name), skip = 32, header = F, sep = "\t")
+    colnames(usgs) <- usgs_headers
+    
+    
+    # edit column names and drop irrelevant ones
+    colnames(usgs) <- c("agency", "site_no", "date_time", "discharge_cfs", "discharge_cfs_approved", "gage_height_feet", "gage_height_feet_approved")
+    
+    usgs %>% 
+      dplyr::select("date_time", "discharge_cfs", "gage_height_feet") %>% 
+      mutate(discharge_cfs = as.numeric(discharge_cfs)) %>% 
+      mutate(gage_height_feet = as.numeric(gage_height_feet)) %>% 
+      dplyr::mutate(date_time = ymd(date_time)) %>% 
+      dplyr::mutate(month = month(date_time)) %>% 
+      dplyr::mutate(year = year(date_time)) -> usgs
+    
+    # summarise into monthly averages
+    usgs %>% 
+      group_by(year,month) %>% 
+      dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+      dplyr::mutate(year_month = ymd(paste(year, month,"01",sep="-")))-> monthly_discharge
+    
+    usgs %>% 
+      group_by(year,month) %>% 
+      dplyr::summarise(mean_gage_height_ft = mean(gage_height_feet, na.rm = TRUE)) %>% 
+      dplyr::mutate(year_month = ymd(paste(year, month,"01",sep="-")))-> monthly_gage_height
+    
+    # calculate annual (run year) averages
+    usgs %>% 
+      rowwise() %>%
+      dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date_time & run_year_end >= date_time)$run_year) %>% 
+      subset(!(run_year %in% c("04/05", "24/25"))) %>% 
+      group_by(run_year) %>% 
+      dplyr::summarise(mean_discharge_cfs = mean(discharge_cfs, na.rm = TRUE)) %>% 
+      dplyr::mutate(year_month = ymd(paste(substr(run_year, start = 4, stop = 5),"01-01",sep="-"))) %>% 
+      # add a line to paste tributary name
+      mutate(tributary = tributary_name) %>% 
+      # drop the year_month column
+      dplyr::select(-year_month) -> annual_discharge
+    
+    usgs %>% 
+      rowwise() %>%
+      dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date_time & run_year_end >= date_time)$run_year) %>% 
+      subset(!(run_year %in% c("04/05", "24/25"))) %>% 
+      group_by(run_year) %>% 
+      dplyr::summarise(mean_gage_height_ft = mean(gage_height_feet, na.rm = TRUE)) %>% 
+      dplyr::mutate(year_month = ymd(paste(substr(run_year, start = 4, stop = 5),"01-01",sep="-"))) %>% 
+      # add a line to paste tributary name
+      mutate(tributary = tributary_name) %>% 
+      # drop the year_month column
+      dplyr::select(-year_month) -> annual_gage_height
+    
+    
+    return(list(annual_discharge, annual_gage_height))
+  }
+  
+}
 
 # variables can either be "discharge only" or "discharge and gage height"
 usgs_data_plot <- function(variables, tributary_name, usgs_file_name){
@@ -186,14 +330,239 @@ return(list(discharge_plot, monthly_discharge_plot, gage_height_plot, gage_heigh
   }
 
 }
+
+# 2) Make a function to calculate annual (calendar year) + total detection efficiency for a river mouth site
+# you'll need to know the active period for the river mouth array. If the array is still active, put
+# "2025-01-01" or some other date in the future
+annual_det_eff <- function(tributary_name, river_mouth_site, 
+                           river_mouth_site_start_date, river_mouth_site_end_date){
+  # get a df of the different sites in the tributary
+  show_trib_sites(tributary_name) -> trib_sites
+  # identify which sites are upstream of the river mouth
+  upstream_sites <- subset(trib_sites, event_site_name != river_mouth_site)$event_site_name
+  # subset total df to only detections from that tributary
+  trib_det <- subset(det_hist, event_site_name %in% trib_sites$event_site_name)
+  
+  # Get the detections + times of fish at upstream sites
+  trib_det %>% 
+    group_by(tag_code) %>% 
+    filter(event_site_name %in% c(upstream_sites)) %>% 
+    dplyr::select(tag_code, start_time) %>% 
+    filter(!(duplicated(tag_code))) %>% 
+    dplyr::rename(upstream_time = start_time) -> trib_up
+  
+  # Get the detections + times of fish at the river mouth site
+  trib_det %>% 
+    group_by(tag_code) %>% 
+    filter(event_site_name %in% c(river_mouth_site)) %>% 
+    dplyr::select(tag_code, start_time) %>% 
+    filter(!(duplicated(tag_code))) %>% 
+    dplyr::rename(river_mouth_time = start_time) -> trib_rm
+  
+  # Join the upstream and river mouth detections
+  trib_rm %>% 
+    full_join(trib_up, by = "tag_code") %>% 
+    dplyr::mutate(river_mouth_time = ymd_hms(river_mouth_time)) %>% 
+    dplyr::mutate(upstream_time = ymd_hms(upstream_time)) %>%
+    dplyr::mutate(year = ifelse(is.na(river_mouth_time), year(upstream_time),
+                         year(river_mouth_time))) %>% 
+    subset(!(is.na(upstream_time))) %>% # we're only looking at fish that we saw at the upstream arrays
+    dplyr::mutate(missed_det = ifelse(is.na(river_mouth_time), "yes", "no"))  %>% 
+    subset(upstream_time >= ymd(river_mouth_site_start_date) &
+             upstream_time <= ymd(river_mouth_site_end_date)) -> trib_det_times
+  
+  # Calculate the annual detection efficiencies + errors
+  trib_det_times %>% 
+    group_by(year) %>% 
+    dplyr::count(missed_det) %>% 
+    ungroup() %>% 
+    complete(year, missed_det, fill = list(n = 0)) %>% 
+    group_by(year) %>% 
+    dplyr::mutate(total = sum(n)) %>% 
+    subset(missed_det == "yes") %>%
+    adorn_totals("row", ... = c(n, total)) %>% 
+    dplyr::mutate(det_eff = (total - n)/total) %>% 
+    dplyr::mutate(det_eff_SD = sqrt(det_eff * (1 - det_eff)/total)) %>% 
+
+    dplyr::select(-missed_det, det_eff_SD) %>% 
+    dplyr::rename(missed_det = n) -> trib_det_eff
+  
+  # calculate confidence intervals using mapply because uniroot doesn't play well with mutate
+  # figure out which ones we can calculate a lower value for, because they're not 0% efficient:
+  nonzero_indices <- which(trib_det_eff$missed_det != trib_det_eff$total)
+  # give them all a 0 to start with; those that we can't calculate values for will keep them
+  trib_det_eff$det_eff_lower95 <- 0
+  # then replace others with the actual value
+  trib_det_eff$det_eff_lower95[nonzero_indices] = mapply(function(total, n){uniroot(function(p){pbinom(total-n-1, total,p) - (1-0.05/2)}, c(0.0001, 0.9999))$root}, subset(trib_det_eff, missed_det != total)$total, subset(trib_det_eff, missed_det != total)$missed_det)
+  # figure out which ones we can calculate an upper value for, because they're not 100% efficient:
+  non1_indices <- which(trib_det_eff$missed_det != 0)
+  # assign everything a 1 to begin with; those that we can't calculate values for will keep the 1
+  trib_det_eff$det_eff_upper95 <- 1
+  # then replace the others with an actual value
+  trib_det_eff$det_eff_upper95[non1_indices] = mapply(function(total, n){uniroot(function(p){pbinom(total-n,total,p) - 0.05/2}, c(0.0001, 0.9999))$root}, subset(trib_det_eff, missed_det != 0)$total, subset(trib_det_eff, missed_det != 0)$missed_det)
+  
+  # return the data frame of detection efficiencies
+  
+  return(as.data.frame(trib_det_eff))
+}
+
+# 2) Make a function to calculate run year detection efficiency for a river mouth site
+# you'll need to know the active period for the river mouth array. If the array is still active, put
+# "2025-01-01" or some other date in the future
+run_year_det_eff <- function(tributary_name, river_mouth_site, 
+                           river_mouth_site_start_date, river_mouth_site_end_date){
+  # get a df of the different sites in the tributary
+  show_trib_sites(tributary_name) -> trib_sites
+  # identify which sites are upstream of the river mouth
+  upstream_sites <- subset(trib_sites, event_site_name != river_mouth_site)$event_site_name
+  # subset total df to only detections from that tributary
+  trib_det <- subset(det_hist, event_site_name %in% trib_sites$event_site_name)
+  
+  # Get the detections + times of fish at upstream sites
+  trib_det %>% 
+    group_by(tag_code) %>% 
+    filter(event_site_name %in% c(upstream_sites)) %>% 
+    dplyr::select(tag_code, start_time) %>% 
+    filter(!(duplicated(tag_code))) %>% 
+    dplyr::rename(upstream_time = start_time) -> trib_up
+  
+  # Get the detections + times of fish at the river mouth site
+  trib_det %>% 
+    group_by(tag_code) %>% 
+    filter(event_site_name %in% c(river_mouth_site)) %>% 
+    dplyr::select(tag_code, start_time) %>% 
+    filter(!(duplicated(tag_code))) %>% 
+    dplyr::rename(river_mouth_time = start_time) -> trib_rm
+  
+  # Join the upstream and river mouth detections
+  trib_rm %>% 
+    full_join(trib_up, by = "tag_code") %>% 
+    dplyr::mutate(river_mouth_time = ymd_hms(river_mouth_time)) %>% 
+    dplyr::mutate(upstream_time = ymd_hms(upstream_time)) %>%
+    dplyr::mutate(year = ifelse(is.na(river_mouth_time), year(upstream_time),
+                         year(river_mouth_time))) %>% 
+    subset(!(is.na(upstream_time))) %>% # we're only looking at fish that we saw at the upstream arrays
+    dplyr::mutate(missed_det = ifelse(is.na(river_mouth_time), "yes", "no"))  %>% 
+    subset(upstream_time >= ymd(river_mouth_site_start_date) &
+             upstream_time <= ymd(river_mouth_site_end_date)) -> trib_det_times
+  
+  # Calculate the annual detection efficiencies + errors
+  trib_det_times %>% 
+    dplyr::mutate(run_year = subset(run_year_df, run_year_start <= upstream_time & run_year_end >= upstream_time)$run_year) %>% 
+    group_by(run_year) %>% 
+    dplyr::count(missed_det) %>% 
+    ungroup() %>% 
+    complete(run_year, missed_det, fill = list(n = 0)) %>% 
+    group_by(run_year) %>% 
+    dplyr::mutate(total = sum(n)) %>% 
+    subset(missed_det == "yes") %>%
+    dplyr::mutate(det_eff = (total - n)/total) %>% 
+    dplyr::mutate(det_eff_SD = sqrt(det_eff * (1 - det_eff)/total)) %>% 
+
+    dplyr::select(-missed_det, det_eff_SD) %>% 
+    dplyr::rename(missed_det = n) -> trib_det_eff
+  
+  # calculate confidence intervals using mapply because uniroot doesn't play well with mutate
+  # figure out which ones we can calculate a lower value for, because they're not 0% efficient:
+  nonzero_indices <- which(trib_det_eff$missed_det != trib_det_eff$total)
+  # give them all a 0 to start with; those that we can't calculate values for will keep them
+  trib_det_eff$det_eff_lower95 <- 0
+  # then replace others with the actual value
+  trib_det_eff$det_eff_lower95[nonzero_indices] = mapply(function(total, n){uniroot(function(p){pbinom(total-n-1, total,p) - (1-0.05/2)}, c(0.0001, 0.9999))$root}, subset(trib_det_eff, missed_det != total)$total, subset(trib_det_eff, missed_det != total)$missed_det)
+  # figure out which ones we can calculate an upper value for, because they're not 100% efficient:
+  non1_indices <- which(trib_det_eff$missed_det != 0)
+  # assign everything a 1 to begin with; those that we can't calculate values for will keep the 1
+  trib_det_eff$det_eff_upper95 <- 1
+  # then replace the others with an actual value
+  trib_det_eff$det_eff_upper95[non1_indices] = mapply(function(total, n){uniroot(function(p){pbinom(total-n,total,p) - 0.05/2}, c(0.0001, 0.9999))$root}, subset(trib_det_eff, missed_det != 0)$total, subset(trib_det_eff, missed_det != 0)$missed_det)
+  
+  # return the data frame of detection efficiencies
+  
+  return(as.data.frame(trib_det_eff))
+}
+
+# 3) Make a function to plot detection efficiency over time
+plot_annual_det_eff <- function(trib_det_eff_df, site_name){
+  subset(trib_det_eff_df, year != "Total") %>% 
+  dplyr::mutate(year = as.numeric(year)) -> trib_det_eff_annual
+
+annual_det_eff_gg <- ggplot(trib_det_eff_annual, aes(x = year, y = det_eff,
+                                               ymin = det_eff_lower95, ymax = det_eff_upper95)) +
+  geom_point() + 
+  geom_line() +
+  geom_linerange() +
+  xlab("Year") + 
+  scale_y_continuous(expand = c(0,0), lim = c(-0.2,1.2), breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1)) +
+  ylab("Detection Efficiency") +
+  ggtitle(site_name) +
+  scale_x_continuous(lim = c(min(trib_det_eff_annual$year), max(trib_det_eff_annual$year)),
+                     breaks = c(seq(min(trib_det_eff_annual$year), max(trib_det_eff_annual$year), by = 2)))
+
+return(annual_det_eff_gg)
+}
+
+
+plot_arrival_timing <- function(tributary_name, river_mouth_site, 
+                           river_mouth_site_start_date, river_mouth_site_end_date){
+  show_trib_sites(tributary_name) -> trib_sites
+  # identify which sites are upstream of the river mouth
+  upstream_sites <- subset(trib_sites, event_site_name != river_mouth_site)$event_site_name
+  # subset total df to only detections from that tributary
+  trib_det <- subset(det_hist, event_site_name %in% trib_sites$event_site_name)
+  
+  # Get the detections + times of fish at upstream sites
+  trib_det %>% 
+    group_by(tag_code) %>% 
+    filter(event_site_name %in% c(upstream_sites)) %>% 
+    dplyr::select(tag_code, start_time) %>% 
+    filter(!(duplicated(tag_code))) %>% 
+    dplyr::rename(upstream_time = start_time) -> trib_up
+  
+  # Get the detections + times of fish at the river mouth site
+  trib_det %>% 
+    group_by(tag_code) %>% 
+    filter(event_site_name %in% c(river_mouth_site)) %>% 
+    dplyr::select(tag_code, start_time) %>% 
+    filter(!(duplicated(tag_code))) %>% 
+    dplyr::rename(river_mouth_time = start_time) -> trib_rm
+  
+  # Join the upstream and river mouth detections
+  trib_rm %>% 
+    full_join(trib_up, by = "tag_code") %>% 
+    dplyr::mutate(river_mouth_time = ymd_hms(river_mouth_time)) %>% 
+    dplyr::mutate(upstream_time = ymd_hms(upstream_time)) %>%
+    dplyr::mutate(year = ifelse(is.na(river_mouth_time), year(upstream_time),
+                         year(river_mouth_time))) %>% 
+    subset(!(is.na(upstream_time))) %>% # we're only looking at fish that we saw at the upstream arrays
+    dplyr::mutate(missed_det = ifelse(is.na(river_mouth_time), "yes", "no"))  %>% 
+    subset(upstream_time >= ymd(river_mouth_site_start_date) &
+             upstream_time <= ymd(river_mouth_site_end_date)) -> trib_det_times
+  
+trib_det_times %>% 
+  dplyr::mutate(river_mouth_month = month(river_mouth_time)) %>% 
+  dplyr::mutate(upstream_month = month(upstream_time)) %>% 
+  dplyr::select(tag_code, river_mouth_month, upstream_month) %>% 
+  pivot_longer(., cols = c("river_mouth_month", "upstream_month")) %>% 
+  dplyr::rename(site = name, month = value) %>% 
+  dplyr::mutate(site = gsub("_month", "", site)) -> trib_det_month
+
+timing_gg <- ggplot(trib_det_month, aes(x = month, fill = site)) +
+  geom_bar(position = position_dodge(preserve = "single")) +
+  scale_fill_manual(values = c("#1f78b4", "#ff7f00")) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9,10,11,12)) +
+  ggtitle(paste0("Detection timing at ", river_mouth_site))
+  
+return(timing_gg)
+}
 ```
 
 ## Description
 This Rmd file will estimate the detection efficiency in each of the tributaries that are states in our model, as long as the tributary has a layout of arrays that allows for detection efficiency to be estimated. Discharge in each tributary is used as a covariate for detection efficiency. There are three sections to this document:
 
-1. Querying tributary discharge data from the [USGS dashboard](https://dashboard.waterdata.usgs.gov/app/nwd/en/)
-2. Reformatting the tributary discharge data
-3. Fitting the Stan model for tributary detection efficiency.
+1. Describing the PIT tag array configurations for each tributary
+2. Querying tributary discharge data from the [USGS dashboard](https://dashboard.waterdata.usgs.gov/app/nwd/en/)
+3. Reformatting the tributary discharge data
+4. Fitting the Stan model for tributary detection efficiency.
 
 Sections 1 and 2 will go tributary by tributary to address the changing distribution of active arrays over time and determine when a) detections in the tributaries are impossible; b) when it is not possible to calculate detection efficiency in the tributary; and c) when the most downstream (closest to the confluence) site had significant changes in detection capability.
 
@@ -223,6 +592,804 @@ The 17 tributaries in our model can broadly be organized into multiple groups:
 - Salmon River
 - Grande Ronde River (this tributary in particular has very few arrays overall)
 
+## Tributary PIT tag arrays
+
+Each tributary will be described with two sections:
+
+1. River site configurations used as a categorical variable when predicting detection efficiency
+2. A lengthier justification for the choices made in part 1.
+
+
+### Asotin Creek
+
+The river mouth site in the Asotin Creek tributary is [ACM](https://www.ptagis.org/Sites/InterrogationSites?code=ACM) (Asotin Creek Mouth).
+
+It has two distinct configurations:
+
+| Years         | Site     | Configuration  |
+|---------------|----------|-------|
+| 11/12-17/18   | ACM      | Initial |
+| 18/19-23/24      | ACM      |   All components replaced and upgraded |
+
+
+#### Asotin Creek Details
+
+We will first look at all of the PIT tag arrays within Asotin Creek:
+
+```{r asotin_creek, echo = FALSE}
+show_trib_sites("Asotin Creek")
+```
+
+River mouth site: ACM
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+
+Yes - upgrade on 10/12/2018. At least two eras: 
+
+1. 8/1/2011-10/11/2018 (potentially different starting 9/21/12, since two antennas were added to site on this date)
+2. 10/12/2018-present
+
+##### ACM description from PTAGIS:
+> ACM is a permanent instream PIT tag interrogation site located near the mouth of Asotin Creek, a tributary of the Snake River. As of 10/12/2018 all previous components present at ACM have been replaced and upgraded. The site consists of 3 rows of antennas with each row containing two 20- foot HDPE antennae, installed in flat-plate configuration. Each antenna is powered by a Biomark IS1001 (ACN) and the ACNs are connected to a Biomark IS1001-MTS master controller. The antennas were built and installed by WDFW. The site is connected to grid power to charge the battery bank powering the detection system. A cellular modem is installed on site to provide remote communication and allow for automated data collection, however, only manual data collection from the IS1001-MTS will occur at ACM until further notice. Prior to the upgrade, the site consisted of six antennas powered by an FS1001M.
+
+
+##### ACM operational history notes from PTAGIS
+1. A bunch of fixes in the first half of 2023 due to damage from storm event
+2. Site down from March 19 - August 26, 2017
+3. Site down March 25-September 1, 2014
+4. Site down from March 26 - August 30, 2012. Two antennas were added to the site on September 21, 2012.
+
+#### Detection efficiency
+```{r asotin_creek_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+ACM_det_eff <- annual_det_eff(tributary_name = "Asotin Creek", river_mouth_site = "ACM - Asotin Creek near mouth", 
+                           river_mouth_site_start_date = "2011-08-01", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(ACM_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> ACM_det_eff_table
+  
+
+kable(ACM_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = ACM_det_eff, site_name = "ACM - Asotin Creek near mouth")
+
+##### Plot timing at river mouth and upstream sites #####
+plot_arrival_timing(tributary_name = "Asotin Creek", river_mouth_site = "ACM - Asotin Creek near mouth", 
+                           river_mouth_site_start_date = "2011-08-01", river_mouth_site_end_date = "2025-01-01")
+
+```
+
+### Clearwater River
+
+#### Clearwater River Details
+
+We will first look at all of the PIT tag arrays within Clearwater River:
+
+```{r clearwater_river, echo = FALSE}
+show_trib_sites("Clearwater River")
+```
+
+There is no site near the mouth of the Clearwater River; in fact, there is not a single interrogation site on the mainstem Clearwater River.
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+NA - no river mouth site chosen. No detection efficiency can be estimated.
+
+### Deschutes River
+
+#### Deschutes River Details
+
+We will first look at all of the PIT tag arrays within Deschutes River:
+
+```{r deschutes_river, echo = FALSE}
+show_trib_sites("Deschutes River")
+```
+The Deschutes River Mouth (DRM) array was active for run years 13/14 through 18/19 (3/13/2013 - 8/9/2019), and run year 23/24 (8/9/23-present). In all other years, antennas were only found at RKM 69 or greater.
+
+River mouth site: DRM
+
+[DRM PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=DRM)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+
+Yes - run years 13/14 through 18/19, and 23/24.
+
+##### DRM description from PTAGIS:
+> Instream interrogation site originally installed February-March 2013 with 12 antennas (7 in the upstream array and 5 in the downstream array) in the west channel at Moody Island, using a Biomark IS1001-MTS. Site stopped submitting data August 2019 and was marked as inactive in 2021. The site was reinstalled August 2023 about 70 meters upstream from its original position. This new configuration consists of 10 antennas total with 5 in the upstream array and 5 in the downstream array. The antennas are positioned to primarily detect tags in fish traveling between Moody Island and the left bank of the river.
+
+
+##### DRM operational history notes from PTAGIS
+Nothing of note.
+
+#### Detection efficiency
+```{r deschutes_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+DRM_det_eff <- annual_det_eff(tributary_name = "Deschutes River", river_mouth_site = "DRM - Deschutes River mouth", 
+                           river_mouth_site_start_date = "2013-03-13", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(DRM_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> DRM_det_eff_table
+  
+
+kable(DRM_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = DRM_det_eff, site_name = "DRM - Deschutes River mouth")
+
+plot_arrival_timing(tributary_name = "Deschutes River", river_mouth_site = "DRM - Deschutes River mouth", 
+                           river_mouth_site_start_date = "2013-03-13", river_mouth_site_end_date = "2019-08-09")
+```
+
+Okay, so the array comes back in 2023, but then detects only a single fish. I think we should just not consider the Deschutes
+as having a river mouth array after run year 18/19.
+
+### Entiat River
+
+#### Entiat River Details
+
+We will first look at all of the PIT tag arrays within Entiat River:
+
+```{r entiat_river, echo = FALSE}
+show_trib_sites("Entiat River")
+```
+
+River mouth site: ENL
+
+[ENL PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=ENL)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+Appears to be a single era, despite 17 years of operation. However, from 2008-2011, there were large periods of time in which the site was not operational, and antennas were frequently replaced as they went down. Shelby calculated detection efficiencies for ENL starting in 09/10 - values are all basically within SE of each other above 90% (no significant year-to-year variation).
+
+
+##### ENL description from PTAGIS:
+
+> This site is located immediately upstream of Entiat, WA. The site is grid powered with a battery switcher and includes eight HDPE pipe-style antennas and IS1001 readers. The readers are connected to an IS1001-MC and satellite remote communications.
+
+
+##### ENL operational history notes from PTAGIS
+1. 2008: April 16 - 18: data lost due to buffer overrun. May 25 - July 24: all antennae washed out. Sept. 8 - 24: no data due to MUX board failure.
+2. 2009: Jan. 7 - Mar. 7: all antennae washed out. May 26 - July 9: site not operational due to elevated flows.
+3. 2010: The site operated continually from January 1st until May 2, when elevated river discharge resulted in the operational loss of antenna #23. This was followed by the loss of antenna #22 on May 16, #21 on May 31, #25 on June 5, #24 on June 8, and #26 on June 13. There was no detection capability and ENL from June 13 until July 28, when antennas 21, 22, 23, 24, and 25 were reinstalled.
+4. 2011: Antennas 3, 5, 6 lost power Jan. 19, antennas 2 and 4 have high noise, antenna 1 has intermittent high noise. Antennas 1,2, and 4 not reading tags due to high noise on Jan. 27. Antennas 3, 5, and 6 were replaced on Feb. 10, and the noise was reduced on antennas 1, 2, and 4. Periods of high noise occurred during May. Antennas 3 and 6 not operational as of May 23; antenna 5 not operational on June 13. Antennas 3, 5, and 6 replaced on September 1. Site down from October 5-11. Antenna 1 lost power from October 27-December 6.
+
+#### Detection efficiency
+```{r entiat_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+ENL_det_eff <- annual_det_eff(tributary_name = "Entiat River", river_mouth_site = "ENL - Lower Entiat River", 
+                           river_mouth_site_start_date = "2007-10-01", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(ENL_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> ENL_det_eff_table
+  
+
+kable(ENL_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = ENL_det_eff, site_name = "ENL - Lower Entiat River")
+
+plot_arrival_timing(tributary_name = "Entiat River", river_mouth_site = "ENL - Lower Entiat River", 
+                           river_mouth_site_start_date = "2007-10-01", river_mouth_site_end_date = "2025-01-01")
+
+```
+
+### Fifteenmile Creek
+
+#### Fifteenmile Creek Details
+
+We will first look at all of the PIT tag arrays within Fifteenmile Creek:
+
+```{r fifteenmile_creek, echo = FALSE}
+show_trib_sites("Fifteenmile Creek")
+```
+
+The mouth site is still active, but there are no upstream sites after 6/30/2019
+
+River mouth site: 158
+
+[158 PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=158)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+Short periods of time in which antennas were not active. Shelby calculated efficiencies starting in 12/13: 49.8% (SE 10.1%), 100% (no SE), 100% (no SE). Doesn't appear that antennas being down affected it.
+
+##### 158 description from PTAGIS:
+> Instream detection array at the confluence of Eightmile creek and Fifteenmile creeks, consisting of a FS1001M multiplexing transceiver, cell modem, and three antennas in each creek. antenna arrays for each creek consist of one antenna each that spans the normal high-water mark and is secured to the substrate for pass-over detection. Site is grid-powered and operates year-round. site is on private land.
+
+
+##### 158 operational history notes from PTAGIS
+1. 2012: Antenna 4 down from March 31 - April 5. Antenna 6 down from March 31 - April 18.
+2. 2013: Antenna 6 down from October 23 - December 27
+3. 2014: Site down intermittently through the year, check event log for details. Converted to IS1001-MTS system in October.
+
+#### Detection efficiency
+```{r 158_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+fif8_det_eff <- annual_det_eff(tributary_name = "Fifteenmile Creek", river_mouth_site = "158 - Fifteenmile Ck at Eightmile Ck", 
+                           river_mouth_site_start_date = "2011-11-29", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(fif8_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> fif8_det_eff_table
+  
+
+kable(fif8_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = fif8_det_eff, site_name = "158 - Fifteenmile Ck at Eightmile Ck")
+
+plot_arrival_timing(tributary_name = "Fifteenmile Creek", river_mouth_site = "158 - Fifteenmile Ck at Eightmile Ck", 
+                           river_mouth_site_start_date = "2011-11-29", river_mouth_site_end_date = "2025-01-01")
+```
+
+### Grande Ronde River
+The Grande Ronde is basically hopeless from a detection efficiency perspective. The first mainstem site on the Grande Ronde is at RKM 155.
+```{r grande_ronde_river, echo = FALSE}
+show_trib_sites("Grande Ronde River")
+```
+
+### Imnaha River
+
+#### Imnaha River Details
+
+We will first look at all of the PIT tag arrays within Imnaha River:
+
+```{r imnaha_river, echo = FALSE}
+show_trib_sites("Imnaha River")
+```
+
+There are two Imnaha River sites close to the river mouth, at RKM 7 (IR1) and RKM 10 (IR2), both starting in November/December 2010.
+
+[IR1 PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=IR1)
+
+[IR2 PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=IR2)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+No.
+
+##### IR1 description from PTAGIS:
+> In-stream detection system consisting of a single array located in the lower Imnaha River. The array (IR1) located at river km 7 (N 45.761162, W -116.750658) consists of four 20 foot Biomark flat panel antennas that span the entire river at base flow. IR1 is operated by the Integrated Status and Effectiveness Project (ISEMP) cooperators Nez Perce Tribe and Quantitative Consultants, Inc. and was installed for continuous monitoring on December 3, 2010. The array includes ISEMP standard site monitoring equipment including: air and water temperature probes, and a water pressure transducer to monitor stream level. Electrical power is provided by a solar/propane hybrid thermal electric generator and remote communication provided by a satellite modem.
+
+##### IR1 operational history notes from PTAGIS
+1. 2011: High noise levels from January 11 - March 10.
+
+##### IR2 description from PTAGIS:
+> In-stream detection system consisting of a single array located in the lower Imnaha River. The array (IR2) located at river km 10 (N 45.742839 W -116.764563) consists of one 10 foot and four 20 foot Biomark flat panel antennas that span the entire river at base flow. IR2 is operated by the Integrated Status and Effectiveness Project (ISEMP) cooperators Nez Perce Tribe and Quantitative Consultants, Inc. and was installed for continuous monitoring in November 2010. The array includes ISEMP standard site monitoring equipment including: air and water temperature probes, and a water pressure transducer to monitor stream level. Electrical power is provided by a solar/propane hybrid thermal electric generator and remote communication provided by a satellite modem.
+
+
+##### IR2 operational history notes from PTAGIS
+1. 2011: High noise levels from January 31 - March 10 resulted in sporadic downtime.
+
+
+#### Detection efficiency
+```{r imnaha_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+IR1_det_eff <- annual_det_eff(tributary_name = "Imnaha River", river_mouth_site = "IR1 - Lower Imnaha River ISA @ km 7", 
+                           river_mouth_site_start_date = "2012-12-01", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(IR1_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> IR1_det_eff_table
+  
+
+kable(IR1_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = IR1_det_eff, site_name = "IR1 - Lower Imnaha River ISA @ km 7")
+
+plot_arrival_timing(tributary_name = "Imnaha River", river_mouth_site = "IR1 - Lower Imnaha River ISA @ km 7", 
+                           river_mouth_site_start_date = "2012-12-01", river_mouth_site_end_date = "2025-01-01")
+```
+
+### John Day River
+
+#### John Day River Details
+
+We will first look at all of the PIT tag arrays within John Day River:
+
+```{r john_day_river, echo = FALSE}
+show_trib_sites("John Day River")
+```
+
+River mouth site: JD1
+
+[JD1 PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=JD1)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+
+Yes, given Shelby's observations and notes from the event log. Shift in 2012. Shelby's observations:
+> Richins 2017: "A suspicious trend was observed for the John Day wild population (Figure A.3). The detection efficiencies at “JD1” from 2008/2009 to 2010/2011 were over 98%. According to the PTAGIS event log, the array was washed out by high flows in 2011. A new array was installed at the same location in 2012. In the following run years, the efficiencies dropped by more than half to 38.8%—48.8%. This shift in detection efficiencies was mirrored by a similar and opposite shift in estimates of return rate to home. Total success rates jumped from 34.7%—43.3% to 58.9%— 63.4%. This trend suggests that detection efficiencies may be overestimated in earlier years or underestimated in later years. However, spawning abundance of John Day River steelhead did increase in the same time period (Northwest Fisheries Science Center 2015)."
+
+
+Two eras: 
+
+1.2007-2011
+2. 2012-present
+
+HOWEVER - none of the upstream sites are online until 2012. So we have to start in 2012, and 
+as such we will only have a single era.
+
+##### JD1 description from PTAGIS:
+John Day River in-stream detection, near McDonald Ferry at RM 20
+
+
+##### JD1 operational history notes from PTAGIS
+Nothing of significance
+
+#### Detection efficiency
+```{r JDR_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+JD1_det_eff <- annual_det_eff(tributary_name = "John Day River", river_mouth_site = "JD1 - John Day River, McDonald Ferry", 
+                           river_mouth_site_start_date = "2007-09-01", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(JD1_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> JD1_det_eff_table
+  
+
+kable(JD1_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = JD1_det_eff, site_name = "JD1 - John Day River, McDonald Ferry")
+
+plot_arrival_timing(tributary_name = "John Day River", river_mouth_site = "JD1 - John Day River, McDonald Ferry", 
+                           river_mouth_site_start_date = "2007-09-01", river_mouth_site_end_date = "2025-01-01")
+
+```
+
+### Methow River
+
+#### Methow River Details
+
+We will first look at all of the PIT tag arrays within Methow River:
+
+```{r methow_river, echo = FALSE}
+show_trib_sites("Methow River")
+```
+
+River mouth site: LMR
+
+[LMR PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=LMR)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+Yes, when the site moved in 2017. However, there are also lots of outages/issues in 2010-2014.
+
+Two eras:
+
+1. 2009-7/31/2017
+2. 8/1/2017-present
+
+##### LMR description from PTAGIS:
+> LMR is a permanent instream PIT tag interrogation site on the Methow River. When first installed with a single row of six antennas, it was located near the WDFW Miller Hole access site at about river kilometer 3. In December 2010, a second row of six antennas was added to the site. In August 2017, the site was relocated 5 kilometers upstream and the two FS1001M transceivers were replaced with a single Biomark/QST QuBe controller. The site currently consists of two rows of antennas, with each row nearly spanning the wetted width of the channel during base flows. Each row consists of six 20-foot HDPE antennas, installed in flat-plate configuration. Each antenna is powered by a Biomark IS1001 (ACN) and the ACNs are connected to a Biomark/QST QuBe controller. The antennas were built and installed by WDFW. The site is powered by a thermoelectric generator. LMR has remote communication abilities provided by a cellular modem. A submersible pressure transducer and temperature probe sensor are also installed to provide environmental condition data collection.
+
+
+##### LMR operational history notes from PTAGIS
+1. 2017: Site moved 5 km upstream and both Mux transceivers were replaced with a QuBE/IS1001 setup Start and end dates based on timer tags.
+2. 2014: Data lost from B antennas April 23-28. Data lost from A antennas May 6-8. Data lost from B antennas May 17-27. Site down from July 17-September 3 due to wildfire.
+3. 2012: Multiple periods when one or more antennas were not functioning or data was lost. Check event log for details.
+4. 2011: Array A1-A6, which had been disabled since Dec. 15, 2010, was restored on January 4, 2011. Array C1-C6 was brought back online on March 4. Site down Apr. 8 - Apr. 9. Antenna B3 stopped working on May 15. Antennas B4-B6 stopped working on May 22. Antennas A4-A6 stopped working on May 24. Antenna A3 stopped working on June 4. Antennas A1 and B2 stopped working on June 7. Only antennas A2 and B1 functioning as of June 7. Antennas A1, A3, A4, A5, B2, B3, B4, B5 reinstalled September 27. All antennas, except A6 and B6, installed and operational as of 1400 September 27.
+5. 2010: Refer to the LMR event log for details about individual antenna outages between January 1 and June 21. The entire site was out of service between June 21 and August 23. A second array was installed on Dec. 2, immediately below the original array. The original (A0) array failed on Dec. 14 and the new array (B0) failed on Dec. 15.
+
+#### Detection efficiency
+```{r methow_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+LMR_det_eff <- annual_det_eff(tributary_name = "Methow River", river_mouth_site = "LMR - Lower Methow River at Pateros", 
+                           river_mouth_site_start_date = "2009-03-01", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(LMR_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> LMR_det_eff_table
+  
+
+kable(LMR_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = LMR_det_eff, site_name = "LMR - Lower Methow River at Pateros")
+
+plot_arrival_timing(tributary_name = "Methow River", river_mouth_site = "LMR - Lower Methow River at Pateros", 
+                           river_mouth_site_start_date = "2009-03-01", river_mouth_site_end_date = "2025-01-01")
+```
+
+### Okanogan River
+
+#### Okanogan River Details
+
+We will first look at all of the PIT tag arrays within Okanogan River:
+
+```{r okanogan_river, echo = FALSE}
+show_trib_sites("Okanogan River")
+```
+
+River mouth site: OKL
+[OKL PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=OKL)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+There are some odd things in the event log about noise, but no directional/era changes.
+
+##### OKL description from PTAGIS:
+> OKL is a permanent instream PIT tag interrogation site at RKM 24.9 on the mainstem Okanogan River, upstream of Chiliwist area in Okanogan County. The site consists of two rows of antennas, with each row spanning the wetted width of the channel during base flows. Each row consists of six 20-foot PVC antennas, installed in flat-plate configuration. The antennas were built and installed by WDFW and CCT. The site is powered by a thermoelectric generator. OKL has remote communication abilities provided by a cellular modem and Campbell Scientific CR1000 datalogger system. A submersible pressure transducer and temperature probe sensors are also installed to provide environmental condition data collection.
+
+
+##### OKL operational history notes from PTAGIS
+1. 2014: Several unexplained gaps in data collection during January and March.
+
+#### Detection efficiency
+```{r okanogan_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+OKL_det_eff <- annual_det_eff(tributary_name = "Okanogan River", river_mouth_site = "OKL - Lower Okanogan Instream Array", 
+                           river_mouth_site_start_date = "2013-03-15", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(OKL_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> OKL_det_eff_table
+  
+
+kable(OKL_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = OKL_det_eff, site_name = "OKL - Lower Okanogan Instream Array")
+
+plot_arrival_timing(tributary_name = "Okanogan River", river_mouth_site = "OKL - Lower Okanogan Instream Array", 
+                           river_mouth_site_start_date = "2013-03-15", river_mouth_site_end_date = "2025-01-01")
+```
+
+
+### Salmon River
+Tons of sites, but all on tribtuaries/different forks of the Salmon
+```{r salmon_river, echo = FALSE}
+show_trib_sites("Salmon River")
+```
+
+Detection efficiency inestimable for the Salmon River.
+
+### Tucannon River
+
+#### Tucannon River Details
+
+We will first look at all of the PIT tag arrays within Tucannon River:
+
+```{r tucannon_river, echo = FALSE}
+show_trib_sites("Tucannon River")
+```
+
+River mouth site: LTR
+[LTR PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=LTR)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+There has been a lot of change with this site, and long periods of inactivity as well as multiple shorter periods. Shelby calculated detection efficiencies for 07/07 through 14/15, with gap for 08/09 due to data loss. 06/07 and 07/08 detection efficiencies were above 96%; 09/10 onward there seems to be a drop all the way down to around 60% in 14/15.
+
+Three potential eras:
+
+1. August 2020-present
+2. 2005-1/8/2009
+3. Inactive: 1/8/2009-9/10/2009
+
+However - we only have data from 2011 onwards. So our eras will be:
+
+1. 10/11 through 19/20
+2. 20/21 - present
+
+
+##### LTR description from PTAGIS:
+> LTR is a permanent instream PIT tag interrogation site at RKM 2.5 on the Tucannon River. The current configuration installed August 2020 consists of three rows of antennas. The upstream row consists of 2 20-foot HDPE antennas, the middle row consists of 2 20 foot HDPE antennas and 1 10 foot PVC antenna, the bottom row consists of 2 HDPE antennas, installed in flat-plate configuration. Each antenna is powered by a Biomark Multiplexing Reader IS1001-MC master controller. The antennas were built and installed by WDFW. The electrical power at the site is provided by 6 200 watt solar panels. Data currently will be downloaded by Biomark through a satellite modem. No environmental monitors are installed at this time. This site has variously consisted of one or two groups of arrays, about a kilometer apart, located near the mouth of the Tucannon River. From Oct. 2005 until April 2008 the downstream array group consisted of two tandem "log" antenna arrays that spanned the low-water channel above the boat ramp. The upstream array group was located at an abandoned railroad bridge abutment upstream of Hwy 261 on the Tucannon River downstream from Starbuck. The upstream array (A0) operated from Oct. 2005 until January 2009. Its various configurations included both pass-through and pass-over antennas. A single array (C0) with six PVC pipe antennas powered by a QST Qube was re-deployed above the boat ramp in Sept. 2009. Responsibility for site operations transferred from USFWS to WDFW on Jan. 7, 2010. The C0 in-stream array was relocated below the Hwy 261 bridge on Sept. 29, 2010. The Qube was replaced with a Biomark IS1001-MC November 2018.
+
+
+##### LTR operational history notes from PTAGIS
+1. 2011: Site down from February 24-28 and April 3-12. High flows caused various antennas to lose power or have high noise throughout the season - see event logs for details. Three antennas were replaced August 16, but not fully functional until August 29.
+2. 2010: Data collected prior to Jan. 7 were lost due to an equipment failure. No data are available between Jan. 19 and Feb. 4 due to a complete loss of power and failure of the lithium battery. No data are available between Feb. 16-18, Apr. 16-21, or May 10-24 due to loss of buffered records. No data available between Sept. 1-20; propane ran out. Detectors were moved upstream near the Hwy 261 bridge on Sept. 29, 2010. No data between Dec. 1-13 due to a TEG malfunction.
+3. 2009: The original A0 MUX array was washed out on Jan. 8, 2009. The downstream antennas in the Tucannon River (identified by transceiver C0) were reinstalled on September 10. These antennae replace the upstream array (transceiver A0) that was blown out. The configuration of the new antenna array is as follows, looking downstream: Beginning on the left hand streambank is C1, C2, and C3 (C3 is approximately mid stream). Slightly downstream (approx. 2 feet) beginning mid stream and going towards the right hand streambank are C4, C5 and C6. There is overlap of C2 and C3 with C4 and C5. Data collected between Nov. 22, 2009 and Jan. 7, 2010 were lost due to an equipment failure.
+
+#### Detection efficiency
+
+```{r tucannon_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+LTR_det_eff <- annual_det_eff(tributary_name = "Tucannon River", river_mouth_site = "LTR - Lower Tucannon River", 
+                           river_mouth_site_start_date = "2005-10-13", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(LTR_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> LTR_det_eff_table
+  
+
+kable(LTR_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = LTR_det_eff, site_name = "LTR - Lower Tucannon River")
+
+plot_arrival_timing(tributary_name = "Tucannon River", river_mouth_site = "LTR - Lower Tucannon River", 
+                           river_mouth_site_start_date = "2005-10-13", river_mouth_site_end_date = "2025-01-01")
+```
+
+
+### Umatilla River
+
+#### Umatilla River Details
+
+We will first look at all of the PIT tag arrays within Umatilla River:
+
+```{r umatilla_river, echo = FALSE}
+show_trib_sites("Umatilla River")
+```
+
+River mouth site: TMF
+[TMF PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=TMF)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+No
+
+##### TMF description from PTAGIS:
+> Adult Fishway and Juvenile Bypass/subsampling facility at Three Mile Falls Dam
+
+
+##### TMF operational history notes from PTAGIS
+1. 2006: First year for TMF site, which combines and replaces the previous TMJ and TMA sites.
+
+#### Detection efficiency
+```{r umatilla_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+TMF_det_eff <- annual_det_eff(tributary_name = "Umatilla River", river_mouth_site = "TMF - Three Mile Falls Dam Combined", 
+                           river_mouth_site_start_date = "2006-11-08", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(TMF_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> TMF_det_eff_table
+  
+
+kable(TMF_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = TMF_det_eff, site_name = "TMF - Three Mile Falls Dam Combined")
+
+plot_arrival_timing(tributary_name = "Umatilla River", river_mouth_site = "TMF - Three Mile Falls Dam Combined", 
+                           river_mouth_site_start_date = "2006-11-08", river_mouth_site_end_date = "2025-01-01")
+```
+
+
+
+
+
+
+
+
+
+
+
+### Walla Walla River
+
+#### Walla Walla River Details
+
+We will first look at all of the PIT tag arrays within Walla Walla River:
+
+```{r walla_walla_river, echo = FALSE}
+show_trib_sites("Walla Walla River")
+```
+
+There are three different river mouth sites for the Walla Walla River, depending on time frame:
+- ORB at RKM 10, active April 2005 - May 2015
+- PRV at RKM 9, active September 2012 - April 2019
+- WWB at RKM 5, active April 2019 - present
+
+[ORB PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=ORB)
+
+[PRV PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=PRV)
+
+[WWB PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=WWB)
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+There are three different river mouth arrays that are used, depending on the timeframe:
+
+1. ORB: 4/15/2005-5/4/2015
+2. PRV: 9/25/2012-4/8/2019
+3. WWB: 4/11/2019-present
+
+However, for each of these sites, there are no major shifts in equipment besides a few periods where antennas were down to be aware of. That being said, the WWB site has a downward trend in detection efficiency, as seen below.
+
+##### WWB description from PTAGIS:
+> The site consists of two 50 ft wide floating barges with twelve 6 ft verticle fins. Each pair of fins act as a single antenna, detection for each antenna is the full length of the fin (6 ft) and 3 ft fore and aft of each fin. Barge will be held in place by single 250lb Danforth anchor. Electronics are powered by battery and solar, cellular modems are used for remote access. Site was initially configured with transceiver and antenna IDs opposite to PTAGIS convention, but was corrected on May 16, 2019.
+
+
+##### WWB operational history notes from PTAGIS
+1. 07/30/2024	General	Observation records were submitted in 2022 and 2023 with incorrect timestamps. Those timestamps were corrected in both the database and data files in July 2024. See the Corrected Files document for details on which files were corrected and when those corrections were made.	
+2. 02/28/2020	Site Up	Upstream barge was re-deployed on 2/28 at about 12:30 pm. Downstream barge is still down.	
+3. 02/18/2020	Site Down	I turned off data load notifications until the barges are returned to service.	
+4. 02/10/2020	Site Down	Both barges were washed downstream during flooding and are currently off line. No time table is set right now for their return to service.
+
+
+##### ORB description from PTAGIS:
+> In-stream arrays at Oasis Road Bridge, lower Walla Walla River
+
+##### ORB operational history notes from PTAGIS
+1. 2011: Antennas 1-5 lost power and or anchoring between Jan. 15 and Jan 18, only antenna 6 still working. As of Feb. 3, antennas 4, 5 and 6 are working. Site down from June 2 - 6 due to power loss from vandalization. Only antennas 5 and 6 working as of May 27. All antennas repaired and fully functioning as of September 1.
+2. 2009: 5/18/09 to 5/27/09 - MUX transceiver locked up; no data for this time period. 9/25/09 to 10/05/09 - Site down for maintenance; no data were collected.
+3. 2006: All antennas were out of service between January 1 and January 25, due to a high water event. Various antennas were in and out of service after January 25. See the ORB event log for additional details. A new Upstream Flat-Plate Array was installed on October 3, augmenting the existing Downstream Pass-Through Array.
+
+##### PRV description from PTAGIS:
+> This interrogation site in the lower Walla Walla River at Pierce Green Valley RV Park is a flat panel, single row of 4 antennas, 3 twenty foot panels and 1 ten foot panel. This passive in-stream interrogation system is located at rkm 15 Site was removed in April 2019.
+
+
+##### PRV operational history notes from PTAGIS
+Nothing of note.
+
+
+#### Detection efficiency
+```{r walla_walla_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+# WWB
+WWB_det_eff <- annual_det_eff(tributary_name = "Walla Walla River", river_mouth_site = "WWB - Walla Walla River Barge Array", 
+                           river_mouth_site_start_date = "2019-04-11", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(WWB_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> WWB_det_eff_table
+  
+
+kable(WWB_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = WWB_det_eff, site_name = "WWB - Walla Walla River Barge Array")
+
+# ORB
+ORB_det_eff <- annual_det_eff(tributary_name = "Walla Walla River", river_mouth_site = "ORB - Oasis Road Bridge", 
+                           river_mouth_site_start_date = "2005-04-15", river_mouth_site_end_date = "2015-05-04")
+
+
+as.data.frame(ORB_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> ORB_det_eff_table
+  
+
+kable(ORB_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = ORB_det_eff, site_name = "ORB - Oasis Road Bridge")
+
+# PRV
+PRV_det_eff <- annual_det_eff(tributary_name = "Walla Walla River", river_mouth_site = "PRV - Walla Walla R at Pierce RV Prk", 
+                           river_mouth_site_start_date = "2012-09-25", river_mouth_site_end_date = "2019-04-08")
+
+
+as.data.frame(PRV_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> PRV_det_eff_table
+  
+
+kable(PRV_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = PRV_det_eff, site_name = "PRV - Walla Walla R at Pierce RV Prk")
+
+plot_arrival_timing(tributary_name = "Walla Walla River", river_mouth_site = "WWB - Walla Walla River Barge Array", 
+                           river_mouth_site_start_date = "2019-04-11", river_mouth_site_end_date = "2025-01-01")
+plot_arrival_timing(tributary_name = "Walla Walla River", river_mouth_site = "ORB - Oasis Road Bridge", 
+                           river_mouth_site_start_date = "2005-04-15", river_mouth_site_end_date = "2015-05-04")
+plot_arrival_timing(tributary_name = "Walla Walla River", river_mouth_site = "PRV - Walla Walla R at Pierce RV Prk", 
+                           river_mouth_site_start_date = "2012-09-25", river_mouth_site_end_date = "2019-04-08")
+```
+
+### Wenatchee River
+
+#### Wenatchee River Details
+
+We will first look at all of the PIT tag arrays within Wenatchee River:
+
+```{r wenatchee_river, echo = FALSE}
+show_trib_sites("Wenatchee River")
+```
+
+River mouth site: LWE
+[LWE PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=LWE)
+
+However, the Lower Wenatchee Barge also came online in 2022. But that time series is so short that we will only consider LWE.
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+No
+
+##### LWE description from PTAGIS:
+> LWE is a permanent instream PIT tag interrogation site at RKM 2.77 on the Wenatchee River. The site consists of two rows of antennas, with each row nearly spanning the wetted width of the channel during base flows. Each row consists of six 20-foot PVC antennas, installed in flat-plate configuration. Each antenna is powered by a Biomark IS1001 (ACN) and the ACNs are connected to a Biomark IS1001-MC (MTS). The antennas were built and installed by WDFW. The site is powered by a thermoelectric generator. LWE has remote communication abilities provided by a cellular modem and Campbell Scientific CR1000 datalogger. A submersible pressure transducer and temperature probe sensors are also installed to provide environmental condition data collection.
+
+
+
+
+##### LWE operational history notes from PTAGIS
+There are a number of short outages, but nothing of concern.
+
+#### Detection efficiency
+```{r wenatchee_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+LWE_det_eff <- annual_det_eff(tributary_name = "Wenatchee River", river_mouth_site = "LWE - Lower Wenatchee River", 
+                           river_mouth_site_start_date = "2011-01-05", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(LWE_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> LWE_det_eff_table
+  
+
+kable(LWE_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+plot_annual_det_eff(trib_det_eff_df = LWE_det_eff, site_name = "LWE - Lower Wenatchee River")
+
+plot_arrival_timing(tributary_name = "Wenatchee River", river_mouth_site = "LWE - Lower Wenatchee River", 
+                           river_mouth_site_start_date = "2011-01-05", river_mouth_site_end_date = "2025-01-01")
+```
+
+### Yakima River
+
+#### Yakima River Details
+
+We will first look at all of the PIT tag arrays within Yakima River:
+
+```{r yakima_river, echo = FALSE}
+show_trib_sites("Yakima River")
+```
+
+River mouth site: PRO
+[PRO PTAGIS](https://www.ptagis.org/Sites/InterrogationSites?code=PRO)
+
+
+##### Is there reason to believe that the detection efficiency of the antennas at the river mouth site may have changed over time?
+No.
+
+##### PRO description from PTAGIS:
+> This site monitors the (three) fish ladders and juvenile sampling facility at Prosser Dam. Each ladder has two antennas installed at the counting window. The juvenile sampling facility has antennas installed downstream of the separator and at the exit from the sample room.
+
+
+
+##### PRO operational history notes from PTAGIS
+There are a number of short outages, but nothing of concern.
+
+#### Detection efficiency
+```{r yakima_river_detection_efficiency, echo = FALSE, message = FALSE, warning = FALSE}
+
+PRO_det_eff <- annual_det_eff(tributary_name = "Yakima River", river_mouth_site = "PRO - Prosser Diversion Dam Combined", 
+                           river_mouth_site_start_date = "2004-10-19", river_mouth_site_end_date = "2025-01-01")
+
+
+as.data.frame(PRO_det_eff) %>% 
+  dplyr::mutate(det_eff = round(det_eff, 3)) %>% 
+  dplyr::mutate(det_eff_lower95 = round(det_eff_lower95, 3)) %>% 
+  dplyr::mutate(det_eff_upper95 = round(det_eff_upper95, 3)) %>% 
+  dplyr::select(-det_eff_SD) -> PRO_det_eff_table
+  
+
+kable(PRO_det_eff_table, booktabs = T)%>% 
+  kable_styling(latex_options = c("striped", "hold_position"))
+plot_annual_det_eff(trib_det_eff_df = PRO_det_eff, site_name = "PRO - Prosser Diversion Dam Combined")
+
+plot_arrival_timing(tributary_name = "Yakima River", river_mouth_site = "PRO - Prosser Diversion Dam Combined", 
+                           river_mouth_site_start_date = "2004-10-19", river_mouth_site_end_date = "2025-01-01")
+```
+
+
+
+
+
 ## Tributary discharge data
 
 For each tributary, discharge data was downloaded from the [USGS dashboard](https://dashboard.waterdata.usgs.gov/app/nwd/en/). For each tributary, a search in the dashboard was conducted for the tributary name, and the USGS station closest to the mouth of that tributary was investigated. Clicking on the icon for the station brings you to the page for that particular station, and you can then click on a link to access the data. Once you click on the link for the data, click on "Daily Data," which will bring you to a page where you can select your data to download. Select "Discharge" and "Gage Height" (if available) from the available parameters, select "Tab-separated" for the Output format, and select 2005-01-01 as the Begin Date and 2024-12-31 as the End Date. Click "Go", and then copy the full output to a plain text editor and save it as a .txt file. These .txt files are all saved in `Data/tributary_data/USGS`.
@@ -236,7 +1403,7 @@ Station: Asotin Creek at Asotin, WA. USGS 13335050
 
 ```{r asotin_creek_usgs_plot, message = FALSE, echo = FALSE}
 # Plot discharge and gage height data
-usgs_data_plot(variables = "discharge only", tributary_name = "Asotin Creek", usgs_file_name = "asotin_creek_13335050_2005-01-01_2024-12-31.txt")
+usgs_data_plot(variables = "discharge and gage height", tributary_name = "Asotin Creek", usgs_file_name = "asotin_creek_13335050_2005-01-01_2024-12-31.txt")
 
 ```
 
@@ -412,4 +1579,1120 @@ usgs_data_plot(variables = "discharge and gage height", tributary_name = "Yakima
 
 
 
+
+
+
+
+
+
+## Reformat tributary discharge data
+
+
+```{r tributary_data_load_for_model}
+
+# Get data for each of the tributaries
+asotin_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Asotin Creek", usgs_file_name = "asotin_creek_13335050_2005-01-01_2024-12-31.txt")[[1]]
+
+deschutes_discharge <- usgs_data_load(variables = "discharge only", tributary_name = "Deschutes River", usgs_file_name = "deschutes_river_14103000_2005-01-01_2024-12-31.txt")
+
+entiat_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Entiat River", usgs_file_name = "entiat_river_12452990_2005-01-01_2024-12-31.txt")[[1]]
+
+imnaha_discharge <- usgs_data_load(variables = "discharge only", tributary_name = "Imnaha River", usgs_file_name = "imnaha_river_13292000_2005-01-01_2013-10-22.txt")
+
+john_day_discharge <- usgs_data_load(variables = "discharge only", tributary_name = "John Day River", usgs_file_name = "john_day_river_14048000_2005-01-01_2024-12-31.txt")
+
+methow_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Methow River", usgs_file_name = "methow_river_12449950_2005-01-01_2024-12-31.txt")[[1]]
+
+okanogan_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Okanogan River", usgs_file_name = "okanogan_river_12447200_2005-01-01_2024-12-31.txt")[[1]]
+
+tucannon_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Tucannon River", usgs_file_name = "tucannon_river_13344500_2005-01-01_2024-12-31.txt")[[1]]
+
+umatilla_discharge <- usgs_data_load(variables = "discharge only", tributary_name = "Umatilla River", usgs_file_name = "umatilla_river_14033500_2005-01-01_2024-12-31.txt")
+
+walla_walla_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Walla Walla River", usgs_file_name = "walla_walla_river_14018500_2005-01-01_2024-12-31.txt")[[1]]
+
+wenatchee_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Wenatchee River", usgs_file_name = "wenatchee_river_12462500_2005-01-01_2024-12-31.txt")[[1]]
+
+yakima_discharge <- usgs_data_load(variables = "discharge and gage height", tributary_name = "Yakima River", usgs_file_name = "yakima_river_12510500_2005-01-01_2024-12-31.txt")[[1]]
+
+# combine all tributary discharge data
+asotin_discharge %>% 
+  bind_rows(., deschutes_discharge) %>% 
+  bind_rows(., entiat_discharge) %>% 
+  bind_rows(., imnaha_discharge) %>% 
+  bind_rows(., john_day_discharge) %>% 
+  bind_rows(., methow_discharge) %>% 
+  bind_rows(., okanogan_discharge) %>% 
+  bind_rows(., tucannon_discharge) %>% 
+  bind_rows(., umatilla_discharge) %>% 
+  bind_rows(., walla_walla_discharge) %>% 
+  bind_rows(., wenatchee_discharge) %>% 
+  bind_rows(., yakima_discharge) -> all_tribs_discharge
+
+# z score
+all_tribs_discharge %>% 
+  dplyr::group_by(tributary) %>% 
+  mutate(mean_discharge_zscore = (mean_discharge_cfs - mean(mean_discharge_cfs))/sd(mean_discharge_cfs)) -> all_tribs_discharge_zscore
+
+tributary_data <- all_tribs_discharge_zscore
+
+# Export this for Stan input
+write.csv(all_tribs_discharge_zscore, here::here("Data", "covariate_data", "model_inputs", "tributary_discharge_data_zscore.csv"))
+
+
+# split the data up by tributary
+
+subset(tributary_data, tributary == "Asotin Creek") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> asotin_discharge
+subset(tributary_data, tributary == "Deschutes River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> deschutes_discharge
+subset(tributary_data, tributary == "Entiat River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> entiat_discharge
+subset(tributary_data, tributary == "Fifteenmile Creek") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> fifteenmile_discharge
+# Create fake data for fifteenmile, with all zeros for discharge - allows fitting of intercept-only model
+fifteenmile_discharge <- data.frame(run_year = asotin_discharge$run_year, mean_discharge_zscore = 0)
+
+subset(tributary_data, tributary == "Hood River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> hood_discharge
+subset(tributary_data, tributary == "Imnaha River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> imnaha_discharge
+# Create fake data for imnaha, with all zeros for discharge - allows fitting of intercept-only model
+imnaha_discharge <- data.frame(run_year = asotin_discharge$run_year, mean_discharge_zscore = 0)
+
+subset(tributary_data, tributary == "John Day River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> john_day_discharge
+subset(tributary_data, tributary == "Methow River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> methow_discharge
+subset(tributary_data, tributary == "Okanogan River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> okanogan_discharge
+subset(tributary_data, tributary == "Tucannon River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> tucannon_discharge
+subset(tributary_data, tributary == "Umatilla River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> umatilla_discharge
+subset(tributary_data, tributary == "Walla Walla River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> walla_walla_discharge
+subset(tributary_data, tributary == "Wenatchee River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> wenatchee_discharge
+subset(tributary_data, tributary == "Yakima River") %>% 
+  dplyr::select(-c(tributary, mean_discharge_cfs)) -> yakima_discharge
+```
+
+``` {r prep_fish_data}
+# load fish detections
+states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete.csv"), row.names = 1)
+
+# load tag code metadata (contains run year info)
+tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
+
+# join fish detections with run year data
+states_complete %>% 
+  left_join(., dplyr::select(tag_code_metadata, tag_code, run_year), by = "tag_code") -> states_complete
+
+# Now use these states to subset the states_complete df and reformat data for stan model
+
+# write a function:
+det_eff_data_prep <- function(rm_state, ups_state){
+  subset(states_complete, state %in% c(rm_state, ups_state)) -> deteff_data
+  deteff_data_ind <- data.frame(tag_code = unique(deteff_data$tag_code), upstream = NA, river_mouth = NA)
+  for (i in 1:nrow(deteff_data_ind)){
+    data <- subset(deteff_data, tag_code == deteff_data_ind$tag_code[i])
+    if(rm_state %in% data$state){
+      deteff_data_ind$river_mouth[i] <- 1
+    } else {
+      deteff_data_ind$river_mouth[i] <- 0
+    }
+    if(ups_state %in% data$state){
+      deteff_data_ind$upstream[i] <- 1
+    } else {
+      deteff_data_ind$upstream[i] <- 0
+    }
+  }
+  
+  # add run year
+  deteff_data_ind %>% 
+    left_join(., dplyr::select(tag_code_metadata, tag_code, run_year), by = "tag_code") -> deteff_data_ind
+  
+  # Now reformat; new column for detected; 0 if not, 1 if detected
+  
+  deteff_data_ind %>% 
+    # we can only look at fish that are seen at the upstream site
+    subset(upstream == 1) %>% 
+    mutate(detected = ifelse(river_mouth == 1, 1, 0)) %>% 
+    dplyr::select(tag_code, run_year, detected) -> deteff_data_ind
+  
+  return(deteff_data_ind)
+}
+
+# get data for each of the snake tribs
+
+asotin_deteff_data <- det_eff_data_prep(rm_state = "Asotin Creek Mouth", ups_state = "Asotin Creek Upstream")
+deschutes_deteff_data <- det_eff_data_prep(rm_state = "Deschutes River Mouth", ups_state = "Deschutes River Upstream")
+entiat_deteff_data <- det_eff_data_prep(rm_state = "Entiat River Mouth", ups_state = "Entiat River Upstream")
+fifteenmile_deteff_data <- det_eff_data_prep(rm_state = "Fifteenmile Creek Mouth", ups_state = "Fifteenmile Creek Upstream")
+imnaha_deteff_data <- det_eff_data_prep(rm_state = "Imnaha River Mouth", ups_state = "Imnaha River Upstream")
+john_day_deteff_data <- det_eff_data_prep(rm_state = "John Day River Mouth", ups_state = "John Day River Upstream")
+methow_deteff_data <- det_eff_data_prep(rm_state = "Methow River Mouth", ups_state = "Methow River Upstream")
+okanogan_deteff_data <- det_eff_data_prep(rm_state = "Okanogan River Mouth", ups_state = "Okanogan River Upstream")
+tucannon_deteff_data <- det_eff_data_prep(rm_state = "Tucannon River Mouth", ups_state = "Tucannon River Upstream")
+umatilla_deteff_data <- det_eff_data_prep(rm_state = "Umatilla River Mouth", ups_state = "Umatilla River Upstream")
+walla_walla_deteff_data <- det_eff_data_prep(rm_state = "Walla Walla River Mouth", ups_state = "Walla Walla River Upstream")
+wenatchee_deteff_data <- det_eff_data_prep(rm_state = "Wenatchee River Mouth", ups_state = "Wenatchee River Upstream")
+yakima_deteff_data <- det_eff_data_prep(rm_state = "Yakima River Mouth", ups_state = "Yakima River Upstream")
+```
+
+```{r prep_tributary_eras}
+
+run_year <- c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+run_year_start <- seq(ymd_hms("2004-06-01 00:00:00"), ymd_hms("2023-06-01 00:00:00"), by = "years")
+run_year_end <- seq(ymd_hms("2005-05-31 23:59:59"), ymd_hms("2024-05-31 23:59:59"), by = "years")
+run_year_numeric = seq(4, 23, 1)
+
+### Record categorical eras
+# first create a template that you can modify for each tributary
+run_year_eras <- data.frame(run_year = run_year,
+                       run_year_numeric = run_year_numeric,
+                       era = 0)
+
+
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 11 & run_year_numeric <= 17, 1,
+                      ifelse(run_year_numeric >= 18, 2, 0))) %>% 
+  dplyr::select(-run_year_numeric) -> asotin_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 13 & run_year_numeric <= 18, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> deschutes_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 7, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> entiat_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 11 & run_year_numeric <= 18, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> fifteenmile_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 10, 1, 0)) %>% # note that Imnaha is a special case because it doesn't have discharge data
+  dplyr::select(-run_year_numeric) -> imnaha_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 12, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> john_day_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 9 & run_year_numeric <= 16, 1,
+                      ifelse(run_year_numeric >= 17, 2, 0))) %>% 
+  dplyr::select(-run_year_numeric) -> methow_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 13, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> okanogan_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 10 & run_year_numeric <= 19, 1,
+                      ifelse(run_year_numeric >= 20, 2, 0))) %>% 
+  dplyr::select(-run_year_numeric) -> tucannon_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 6 & run_year_numeric <= 13, 1,
+                      ifelse(run_year_numeric >= 14, 2, 0))) %>% 
+  dplyr::select(-run_year_numeric) -> umatilla_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 5 & run_year_numeric <= 11, 1,
+                      ifelse(run_year_numeric >= 12 & run_year_numeric <= 14, 2,
+                             ifelse(run_year_numeric >= 15 & run_year_numeric <= 18, 3,
+                                  ifelse(run_year_numeric >= 19, 4, 0))))) %>% 
+  dplyr::select(-run_year_numeric) -> walla_walla_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 10, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> wenatchee_eras
+
+run_year_eras %>% 
+  mutate(era = ifelse(run_year_numeric >= 4, 1, 0)) %>% 
+  dplyr::select(-run_year_numeric) -> yakima_eras
+
+```
+
+```{r prep_data_for_stan_model}
+# Collate all info into design matrix
+
+asotin_deteff_data %>% 
+  left_join(., asotin_eras, by = "run_year") %>% 
+  left_join(., asotin_discharge, by = "run_year") %>% 
+  mutate(tributary = "Asotin")-> asotin_deteff_data
+
+deschutes_deteff_data %>% 
+  left_join(., deschutes_eras, by = "run_year") %>% 
+  left_join(., deschutes_discharge, by = "run_year") %>% 
+  mutate(tributary = "Deschutes")-> deschutes_deteff_data
+
+entiat_deteff_data %>% 
+  left_join(., entiat_eras, by = "run_year") %>% 
+  left_join(., entiat_discharge, by = "run_year") %>% 
+  mutate(tributary = "Entiat")-> entiat_deteff_data
+
+fifteenmile_deteff_data %>% 
+  left_join(., fifteenmile_eras, by = "run_year") %>% 
+  left_join(., fifteenmile_discharge, by = "run_year") %>% 
+  mutate(tributary = "Fifteenmile")-> fifteenmile_deteff_data
+
+imnaha_deteff_data %>% 
+  left_join(., imnaha_eras, by = "run_year") %>% 
+  left_join(., imnaha_discharge, by = "run_year") %>% 
+  mutate(tributary = "Imnaha")-> imnaha_deteff_data
+
+john_day_deteff_data %>% 
+  left_join(., john_day_eras, by = "run_year") %>% 
+  left_join(., john_day_discharge, by = "run_year") %>% 
+  mutate(tributary = "John Day")-> john_day_deteff_data
+
+methow_deteff_data %>% 
+  left_join(., methow_eras, by = "run_year") %>% 
+  left_join(., methow_discharge, by = "run_year") %>% 
+  mutate(tributary = "Methow")-> methow_deteff_data
+
+okanogan_deteff_data %>% 
+  left_join(., okanogan_eras, by = "run_year") %>% 
+  left_join(., okanogan_discharge, by = "run_year") %>% 
+  mutate(tributary = "Okanogan")-> okanogan_deteff_data
+
+tucannon_deteff_data %>% 
+  left_join(., tucannon_eras, by = "run_year") %>% 
+  left_join(., tucannon_discharge, by = "run_year") %>% 
+  mutate(tributary = "Tucannon")-> tucannon_deteff_data
+
+umatilla_deteff_data %>% 
+  left_join(., umatilla_eras, by = "run_year") %>% 
+  left_join(., umatilla_discharge, by = "run_year") %>% 
+  mutate(tributary = "Umatilla")-> umatilla_deteff_data
+
+walla_walla_deteff_data %>% 
+  left_join(., walla_walla_eras, by = "run_year") %>% 
+  left_join(., walla_walla_discharge, by = "run_year") %>% 
+  mutate(tributary = "Walla Walla")-> walla_walla_deteff_data
+
+wenatchee_deteff_data %>% 
+  left_join(., wenatchee_eras, by = "run_year") %>% 
+  left_join(., wenatchee_discharge, by = "run_year") %>% 
+  mutate(tributary = "Wenatchee")-> wenatchee_deteff_data
+
+yakima_deteff_data %>% 
+  left_join(., yakima_eras, by = "run_year") %>% 
+  left_join(., yakima_discharge, by = "run_year") %>% 
+  mutate(tributary = "Yakima")-> yakima_deteff_data
+
+# Bind together
+asotin_deteff_data %>% 
+  bind_rows(., deschutes_deteff_data) %>% 
+  bind_rows(., entiat_deteff_data) %>% 
+  bind_rows(., fifteenmile_deteff_data) %>% 
+  bind_rows(., imnaha_deteff_data) %>% 
+  bind_rows(., john_day_deteff_data) %>% 
+  bind_rows(., methow_deteff_data) %>% 
+  bind_rows(., okanogan_deteff_data) %>% 
+  bind_rows(., tucannon_deteff_data) %>% 
+  bind_rows(., umatilla_deteff_data) %>% 
+  bind_rows(., walla_walla_deteff_data) %>% 
+  bind_rows(., wenatchee_deteff_data) %>% 
+  bind_rows(., yakima_deteff_data) -> deteff_data
+
+# convert into a design matrix
+design_matrix <- matrix(nrow = nrow(deteff_data), ncol = 33)
+
+# First 20 columns: alphas: aso1, aso2, des1, ent1, fif1, imn1, jdr1, met1, met2, oka1, tuc1, tuc2, uma1, uma2, wawa1, wawa2, wawa3, wawa4, wen1, yak1
+# Columns 21-33: betas: beta_aso, beta_des, beta_ent, beta_fif, beta_imn, beta_jdr, beta_met, beta_oka, beta_tuc, beta_uma, beta_wawa, beta_wen, beta_yak
+for (i in 1:nrow(deteff_data)){
+  # alphas
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Asotin") {
+    design_matrix[i,1] <- 1
+  } else {
+    design_matrix[i,1] <- 0
+  }
+  if (deteff_data$era[i] == 2 & deteff_data$tributary[i] == "Asotin") {
+    design_matrix[i,2] <- 1
+  } else {
+    design_matrix[i,2] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Deschutes") {
+    design_matrix[i,3] <- 1
+  } else {
+    design_matrix[i,3] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Entiat") {
+    design_matrix[i,4] <- 1
+  } else {
+    design_matrix[i,4] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Fifteenmile") {
+    design_matrix[i,5] <- 1
+  } else {
+    design_matrix[i,5] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Imnaha") {
+    design_matrix[i,6] <- 1
+  } else {
+    design_matrix[i,6] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "John Day") {
+    design_matrix[i,7] <- 1
+  } else {
+    design_matrix[i,7] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Methow") {
+    design_matrix[i,8] <- 1
+  } else {
+    design_matrix[i,8] <- 0
+  }
+  if (deteff_data$era[i] == 2 & deteff_data$tributary[i] == "Methow") {
+    design_matrix[i,9] <- 1
+  } else {
+    design_matrix[i,9] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Okanogan") {
+    design_matrix[i,10] <- 1
+  } else {
+    design_matrix[i,10] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Tucannon") {
+    design_matrix[i,11] <- 1
+  } else {
+    design_matrix[i,11] <- 0
+  }
+  if (deteff_data$era[i] == 2 & deteff_data$tributary[i] == "Tucannon") {
+    design_matrix[i,12] <- 1
+  } else {
+    design_matrix[i,12] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Umatilla") {
+    design_matrix[i,13] <- 1
+  } else {
+    design_matrix[i,13] <- 0
+  }
+  if (deteff_data$era[i] == 2 & deteff_data$tributary[i] == "Umatilla") {
+    design_matrix[i,14] <- 1
+  } else {
+    design_matrix[i,14] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Walla Walla") {
+    design_matrix[i,15] <- 1
+  } else {
+    design_matrix[i,15] <- 0
+  }
+  if (deteff_data$era[i] == 2 & deteff_data$tributary[i] == "Walla Walla") {
+    design_matrix[i,16] <- 1
+  } else {
+    design_matrix[i,16] <- 0
+  }
+  if (deteff_data$era[i] == 3 & deteff_data$tributary[i] == "Walla Walla") {
+    design_matrix[i,17] <- 1
+  } else {
+    design_matrix[i,17] <- 0
+  }
+  if (deteff_data$era[i] == 4 & deteff_data$tributary[i] == "Walla Walla") {
+    design_matrix[i,18] <- 1
+  } else {
+    design_matrix[i,18] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Wenatchee") {
+    design_matrix[i,19] <- 1
+  } else {
+    design_matrix[i,19] <- 0
+  }
+  if (deteff_data$era[i] == 1 & deteff_data$tributary[i] == "Yakima") {
+    design_matrix[i,20] <- 1
+  } else {
+    design_matrix[i,20] <- 0
+  }
+  # Betas
+  if (deteff_data$tributary[i] == "Asotin") {
+    design_matrix[i,21] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,21] <- 0
+  }
+  if (deteff_data$tributary[i] == "Deschutes") {
+    design_matrix[i,22] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,22] <- 0
+  }
+  if (deteff_data$tributary[i] == "Entiat") {
+    design_matrix[i,23] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,23] <- 0
+  }
+  if (deteff_data$tributary[i] == "Fifteenmile") {
+    design_matrix[i,24] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,24] <- 0
+  }
+  if (deteff_data$tributary[i] == "Imnaha") {
+    design_matrix[i,25] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,25] <- 0
+  }
+  if (deteff_data$tributary[i] == "John Day") {
+    design_matrix[i,26] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,26] <- 0
+  }
+  if (deteff_data$tributary[i] == "Methow") {
+    design_matrix[i,27] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,27] <- 0
+  }
+  if (deteff_data$tributary[i] == "Okanogan") {
+    design_matrix[i,28] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,28] <- 0
+  }
+  if (deteff_data$tributary[i] == "Tucannon") {
+    design_matrix[i,29] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,29] <- 0
+  }
+  if (deteff_data$tributary[i] == "Umatilla") {
+    design_matrix[i,30] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,30] <- 0
+  }
+  if (deteff_data$tributary[i] == "Walla Walla") {
+    design_matrix[i,31] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,31] <- 0
+  }
+  if (deteff_data$tributary[i] == "Wenatchee") {
+    design_matrix[i,32] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,32] <- 0
+  }
+  if (deteff_data$tributary[i] == "Yakima") {
+    design_matrix[i,33] <- deteff_data$mean_discharge_zscore[i]
+  } else {
+    design_matrix[i,33] <- 0
+  }
+}
+```
+
+
+
+
+## Fit Stan model
+```{r fit_detection_efficiency_stan_model}
+data <- list(N = nrow(design_matrix),
+             y = deteff_data$detected,
+             J = 20,
+             K = 13,
+             X = design_matrix)
+
+# Step 1: load the model
+# mod <- cmdstan_model("01_stan_sim_int_only.stan", compile = FALSE)
+mod <- cmdstan_model(here::here("Stan", "detection_efficiency", "tributary_detection_efficiency.stan"), compile = FALSE)
+
+# Step 2: Compile the model, set up to run in parallel
+mod$compile(cpp_options = list(stan_threads = TRUE))
+
+# Step 3: Run MCMC (HMC)
+fit <- mod$sample(
+  data = data, 
+  # seed = 123, 
+  chains = 3,
+  # parallel_chains = 1,
+  # parallel_chains = 3,
+  refresh = 10, # print update every iter
+  # iter_sampling = 1000,
+  # iter_warmup = 1000,
+  iter_warmup = 2000,
+  iter_sampling = 2000,
+  # threads_per_chain = 28,
+  threads_per_chain = 7,
+  init = 1,
+  thin = 2
+)
+
+
+# Extract parameter estimates
+fit$save_object(file = here::here("Stan", "detection_efficiency", "detection_efficiency_stan_fit.rds"))
+
+
+# Calculate detection probability from parameter estimates
+deteff_stan_fit_summary <- fit$summary()
+
+# simple diagnostics
+acf(fit$draws()[,2,3])
+# mcmc_trace(fit$draws(), pars = c("alpha[1]"))
+
+deteff_stan_fit_summary[1:10,]
+
+##### EXPORT PARAMETER ESTIMATES TO USE AS PRIORS IN PRIMARY MODEL #####
+# create matrix to store values
+det_eff_param_posteriors <- matrix(nrow = 33, ncol = 2)
+det_eff_param_posteriors[,1] <- deteff_stan_fit_summary$mean[2:34]
+det_eff_param_posteriors[,2] <- deteff_stan_fit_summary$sd[2:34]
+
+write.csv(det_eff_param_posteriors, here::here("Stan", "detection_efficiency", "det_eff_param_posteriors.csv"))
+```
+
+```{r stan_model_diagnostics}
+fit_summary <- summarise_draws(fit)
+
+fit_summary %>% 
+  filter(grepl("alpha|beta", variable)) -> fit_summary_params
+
+ggplot(fit_summary_params, aes(x = rhat)) +
+    geom_histogram()
+
+ggplot(fit_summary_params, aes(x = ess_bulk)) +
+    geom_histogram()
+
+ggplot(fit_summary_params, aes(x = ess_tail)) +
+    geom_histogram()
+
+# Trace plots for alpha and beta parameters
+param_names <- fit_summary_params$variable
+
+mcmc_trace(fit$draws(), pars = param_names[1:9])
+mcmc_trace(fit$draws(), pars = param_names[10:18])
+mcmc_trace(fit$draws(), pars = param_names[19:27])
+mcmc_trace(fit$draws(), pars = param_names[28:33])
+
+```
+All diagnostics look good.
+
+#### Plot fits to data from Stan model
+
+```{r reformat_stan_draws}
+DE_draws <- as.data.frame(fit$draws())
+# colnames(DE_draws)
+# Drop everything except alpha and beta parameters
+alpha_colnames <- colnames(DE_draws)[grepl("alpha", colnames(DE_draws))]
+beta_colnames <- colnames(DE_draws)[grepl("beta", colnames(DE_draws))]
+
+DE_draws %>%
+  dplyr::select(c(alpha_colnames, beta_colnames)) -> DE_param_draws
+
+# Create an external df to map indexing of the parameter vectors to their actual meanings
+det_eff_params <- data.frame(parameter = c(paste0("alpha[", 1:20, "]"), paste0("beta[", 1:13, "]")),
+                               tributary_parameter = c("asotin_alpha1", "asotin_alpha2", "deschutes_alpha1", "entiat_alpha1",
+                    "fifteenmile_alpha1", "imnaha_alpha1", "john_day_alpha1", "methow_alpha1", "methow_alpha2",
+                    "okanogan_alpha1", "tucannon_alpha1", "tucannon_alpha2", "umatilla_alpha1", "umatilla_alpha2", "walla_walla_alpha1",
+                    "walla_walla_alpha2", "walla_walla_alpha3", "walla_walla_alpha4", "wenatchee_alpha1", "yakima_alpha1", 
+                    "asotin_beta", "deschutes_beta"         ,
+                    "entiat_beta", "fifteenmile_beta", "imnaha_beta", "john_day_beta", "methow_beta"  ,
+                    "okanogan_beta", "tucannon_beta", "umatilla_beta", "walla_walla_beta", "wenatchee_beta", "yakima_beta"))
+
+
+# reformat so that for each parameter, you just have one column
+DE_param_draws %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  rownames_to_column("parameter") %>% 
+  mutate(chain = substring(parameter, 1, 1)) %>% 
+  relocate(chain, .after = "parameter") %>% 
+  mutate(parameter = substring(parameter, 3)) %>% 
+  left_join(det_eff_params, by = "parameter") %>% 
+  pivot_longer(cols = -c(parameter, chain, tributary_parameter), names_to = "iter") -> DE_param_draws_long
+
+
+```
+
+```{r define_functions_plot_detection_efficiency_model_fit, eval = FALSE}
+# Predict detection efficiency for a specific tributary/time period
+predict_DE <- function(draws_object, alpha, beta, niter, nchains){
+  
+  # Make this work even if we don't have discharge values - if beta = NA
+  if (is.na(beta)){
+    alpha_draws <- subset(draws_object, tributary_parameter == alpha)
+    beta_draws <- data.frame(chain = rep(1:nchains, each = niter), 
+                             iter = rep(1:niter, nchains),
+                             value = rep(0, niter*nchains))
+  } else {
+    alpha_draws <- subset(draws_object, tributary_parameter == alpha)
+    beta_draws <- subset(draws_object, tributary_parameter == beta)
+    
+  }
+  
+
+
+  
+  
+  # create a sequence of Z-scores
+  seq(-2,2, 0.01) -> zscore_discharge_values
+  
+  DE_predicted <- matrix(nrow = length(zscore_discharge_values), ncol = nchains*niter)
+  # Then predict detection probability at each draws of alpha and beta for each
+  for (i in 1:length(zscore_discharge_values)){
+    for (j in 1:nchains){
+      for (k in 1:niter){
+      # DE_predicted[i,(j-1)*niter+k] <- plogis(DE_param_draws[k,1] + DE_param_draws[k,2] * zscore_discharge_values[i])
+        DE_predicted[i,(j-1)*niter+k] <- plogis(subset(alpha_draws, chain == j & iter == k)$value + 
+                                                  subset(beta_draws, chain == j & iter == k)$value * zscore_discharge_values[i])
+      }
+    }
+    
+  }
+  
+  # Then get quantiles at each zscore
+  DE_predicted_quantiles <- data.frame(discharge = zscore_discharge_values,
+                                       median = NA,
+                                       q2.5 = NA,
+                                       q97.5 = NA)
+  
+  for (i in 1:nrow(DE_predicted)){
+    DE_predicted_quantiles$median[i] <- quantile(DE_predicted[i,], 0.5)
+    DE_predicted_quantiles$q2.5[i] <- quantile(DE_predicted[i,], 0.025)
+    DE_predicted_quantiles$q97.5[i] <- quantile(DE_predicted[i,], 0.975)
+  }
+  
+  DE_predicted_quantiles %>% 
+    pivot_longer(., names_to = "name", cols = c("q2.5", "median", "q97.5")) -> DE_predicted_quantiles_long
+  
+  DE_predicted_quantiles_long$name <- factor(DE_predicted_quantiles_long$name, levels = c("q2.5", "median", "q97.5"))
+  
+  return(DE_predicted_quantiles_long)
+}
+
+# simple function to return run year det eff data, for only the era in question
+prep_det_discharge_data <- function(tributary_name, river_mouth_site,
+                                    river_mouth_site_start_date, river_mouth_site_end_date,
+                                    run_years,
+                                    discharge_data){
+  trib_run_year_det_eff <- run_year_det_eff(tributary_name = tributary_name, river_mouth_site = river_mouth_site, 
+                           river_mouth_site_start_date = river_mouth_site_start_date, 
+                           river_mouth_site_end_date = river_mouth_site_end_date)
+  
+  trib_run_year_det_eff %>% 
+    filter(run_year %in% run_years) -> trib_run_year_det_eff
+
+trib_run_year_det_eff %>% 
+  left_join(subset(discharge_data, tributary == tributary_name), by = "run_year") -> run_year_det_eff_discharge_data
+
+return(run_year_det_eff_discharge_data)
+  
+}
+
+
+
+
+# Step 3: Make a function to plot them
+DE_plot_function <- function(predicted_DE_quantiles, run_year_det_eff_discharge_data, plot_name){
+  plot <- ggplot(predicted_DE_quantiles, aes(x = discharge, y = value, color = name, linetype = name)) +
+    geom_line(size = 1) +
+    geom_point(data = run_year_det_eff_discharge_data, aes(x = mean_discharge_zscore, y = det_eff, size = total), inherit.aes = FALSE) +
+    geom_text(data = run_year_det_eff_discharge_data, aes(x = mean_discharge_zscore, y = det_eff-0.05, label = run_year), inherit.aes = FALSE) +
+    xlab("Discharge (Z-scored)") +
+    ylab("Detection Efficiency") +
+    scale_color_manual(values = c("grey50", "black", "grey50")) +
+    scale_linetype_manual(values = c(2,1,2)) +
+    ggtitle(plot_name) +
+    theme(legend.position = "none",
+          axis.text = element_text(size = 10),
+          axis.title = element_text(size = 14)) +
+    scale_y_continuous(limits = c(0,1), expand = c(0,0))
+  
+  return(plot)
+}
+
+det_eff_params
+```
+
+```{r generate_DE_fit_plots}
+#### Asotin Creek ####
+asotin_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+             alpha = "asotin_alpha1", 
+             beta = "asotin_beta", 
+             niter = 1000, 
+             nchains = 3)
+asotin_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Asotin Creek", 
+                                                     river_mouth_site = "ACM - Asotin Creek near mouth", 
+                           river_mouth_site_start_date = "2011-08-01", 
+                           river_mouth_site_end_date = "2025-01-01",
+                           discharge_data = all_tribs_discharge_zscore,
+                           run_years = c("11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18"))
+asotin_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = asotin_predicted_DE_quantiles, 
+                 run_year_det_eff_discharge_data = asotin_det_discharge_data, 
+                 plot_name = "Asotin Creek (11/12-17/18)")
+
+asotin_fitted_DE_plot_era1
+
+asotin_predicted_DE_quantiles_era2 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "asotin_alpha2", 
+                                                 beta = "asotin_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+asotin_det_discharge_data_era2 <- prep_det_discharge_data(tributary_name = "Asotin Creek", 
+                                                          river_mouth_site = "ACM - Asotin Creek near mouth", 
+                                                          river_mouth_site_start_date = "2011-08-01", 
+                                                          river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+asotin_fitted_DE_plot_era2 <- DE_plot_function(predicted_DE_quantiles = asotin_predicted_DE_quantiles_era2, 
+                                               run_year_det_eff_discharge_data = asotin_det_discharge_data_era2, 
+                                               plot_name = "Asotin Creek (18/19-23/24)")
+
+asotin_fitted_DE_plot_era2
+
+#### Deschutes River ####
+deschutes_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "deschutes_alpha1", 
+                                                 beta = "deschutes_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+deschutes_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Deschutes River", 
+                                                             river_mouth_site = "DRM - Deschutes River mouth", 
+                                                             river_mouth_site_start_date = "2013-03-13", 
+                                                             river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20"))
+deschutes_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = deschutes_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = deschutes_det_discharge_data_era1, 
+                                               plot_name = "Deschutes River (13/14-19/20)")
+
+deschutes_fitted_DE_plot_era1
+ 
+#### Entiat River ####
+entiat_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "entiat_alpha1", 
+                                                 beta = "entiat_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+entiat_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Entiat River", 
+                                                          river_mouth_site = "ENL - Lower Entiat River", 
+                                                          river_mouth_site_start_date = "2007-10-01", 
+                                                          river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c( "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", 
+                                                                         "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21",
+                                                                         "21/22", "22/23", "23/24"))
+entiat_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = entiat_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = entiat_det_discharge_data_era1, 
+                                               plot_name = "Entiat River (07/08-23/24)")
+
+entiat_fitted_DE_plot_era1
+
+#### Fifteenmile Creek ####
+# Fifteenmile Creek doesn't have any discharge data, so we don't need
+# to predict based on discharge.
+
+# fifteenmile_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+#                                                  alpha = "fifteenmile_alpha1", 
+#                                                  beta = "fifteenmile_beta", 
+#                                                  niter = 1000, 
+#                                                  nchains = 3)
+# fifteenmile_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Fifteenmile Creek", 
+#                                                                river_mouth_site = "158 - Fifteenmile Ck at Eightmile Ck", 
+#                                                                river_mouth_site_start_date = "2011-11-29", 
+#                                                                river_mouth_site_end_date = "2025-01-01",
+#                                                           discharge_data = all_tribs_discharge_zscore,
+#                                                           run_years = c("11/12", "12/13", "13/14", 
+#                                                                          "14/15", "15/16", "16/17", "17/18", "18/19"))
+# fifteenmile_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = fifteenmile_predicted_DE_quantiles_era1, 
+#                                                run_year_det_eff_discharge_data = fifteenmile_det_discharge_data_era1, 
+#                                                plot_name = "Fifteenmile Creek (11/12-18/19)")
+# 
+# fifteenmile_fitted_DE_plot_era1
+
+#### Imnaha River ####
+# Imnaha River doesn't have any discharge data, so we don't need
+# to predict based on discharge.
+
+# imnaha_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+#                                                  alpha = "imnaha_alpha1", 
+#                                                  beta = "imnaha_beta", 
+#                                                  niter = 1000, 
+#                                                  nchains = 3)
+# imnaha_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Imnaha River", 
+#                                                           river_mouth_site = "IR1 - Lower Imnaha River ISA @ km 7", 
+#                                                           river_mouth_site_start_date = "2012-12-01", 
+#                                                           river_mouth_site_end_date = "2025-01-01",
+#                                                           discharge_data = all_tribs_discharge_zscore,
+#                                                           run_years = c("10/11", "11/12", "12/13", "13/14", 
+#                                                                          "14/15", "15/16", "16/17", "17/18", 
+#                                                                         "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+# imnaha_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = imnaha_predicted_DE_quantiles_era1, 
+#                                                run_year_det_eff_discharge_data = imnaha_det_discharge_data_era1, 
+#                                                plot_name = "Imnaha River (10/11-23/24)")
+
+imnaha_fitted_DE_plot_era1
+
+#### John Day River ####
+
+john_day_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "john_day_alpha1", 
+                                                 beta = "john_day_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+john_day_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "John Day River", 
+                                                            river_mouth_site = "JD1 - John Day River, McDonald Ferry", 
+                                                            river_mouth_site_start_date = "2007-09-01", 
+                                                            river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("12/13", "13/14", 
+                                                                        "14/15", "15/16", "16/17", "17/18", 
+                                                                        "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+john_day_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = john_day_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = john_day_det_discharge_data_era1, 
+                                               plot_name = "John Day River (12/13-23/24)")
+
+john_day_fitted_DE_plot_era1
+
+#### Methow River ####
+
+methow_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "methow_alpha1", 
+                                                 beta = "methow_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+methow_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Methow River", 
+                                                          river_mouth_site = "LMR - Lower Methow River at Pateros", 
+                                                          river_mouth_site_start_date = "2009-03-01", 
+                                                          river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("09/10", "10/11", "11/12", "12/13", "13/14",
+                                                                        "14/15", "15/16", "16/17"))
+methow_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = methow_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = methow_det_discharge_data_era1, 
+                                               plot_name = "Methow River (09/10-16/17)")
+
+methow_fitted_DE_plot_era1
+
+methow_predicted_DE_quantiles_era2 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                   alpha = "methow_alpha2", 
+                                                   beta = "methow_beta", 
+                                                   niter = 1000, 
+                                                   nchains = 3)
+methow_det_discharge_data_era2 <- prep_det_discharge_data(tributary_name = "Methow River", 
+                                                          river_mouth_site = "LMR - Lower Methow River at Pateros", 
+                                                          river_mouth_site_start_date = "2009-03-01", 
+                                                          river_mouth_site_end_date = "2025-01-01",
+                                                            discharge_data = all_tribs_discharge_zscore,
+                                                            run_years = c("17/18", 
+                                                                          "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+methow_fitted_DE_plot_era2 <- DE_plot_function(predicted_DE_quantiles = methow_predicted_DE_quantiles_era2, 
+                                                 run_year_det_eff_discharge_data = methow_det_discharge_data_era2, 
+                                                 plot_name = "Methow River (17/18-23/24)")
+
+methow_fitted_DE_plot_era2
+
+#### Okanogan River ####
+
+okanogan_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "okanogan_alpha1", 
+                                                 beta = "okanogan_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+okanogan_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Okanogan River", 
+                                                            river_mouth_site = "OKL - Lower Okanogan Instream Array", 
+                                                            river_mouth_site_start_date = "2013-03-15", 
+                                                            river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("13/14", "14/15", "15/16", "16/17", "17/18", 
+                                                                        "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+okanogan_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = okanogan_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = okanogan_det_discharge_data_era1, 
+                                               plot_name = "Okanogan River (13/14-23/24)")
+
+okanogan_fitted_DE_plot_era1
+
+#### Tucannon River ####
+
+tucannon_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "tucannon_alpha1", 
+                                                 beta = "tucannon_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+tucannon_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Tucannon River", 
+                                                            river_mouth_site = "LTR - Lower Tucannon River", 
+                                                            river_mouth_site_start_date = "2005-10-13", 
+                                                            river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("10/11", "11/12", "12/13", "13/14", 
+                                                                        "14/15", "15/16", "16/17", "17/18", 
+                                                                        "18/19", "19/20"))
+tucannon_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = tucannon_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = tucannon_det_discharge_data_era1, 
+                                               plot_name = "Tucannon River (10/11-19/20)")
+
+tucannon_fitted_DE_plot_era1
+
+tucannon_predicted_DE_quantiles_era2 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                   alpha = "tucannon_alpha2", 
+                                                   beta = "tucannon_beta", 
+                                                   niter = 1000, 
+                                                   nchains = 3)
+tucannon_det_discharge_data_era2 <- prep_det_discharge_data(tributary_name = "Tucannon River", 
+                                                            river_mouth_site = "LTR - Lower Tucannon River", 
+                                                            river_mouth_site_start_date = "2005-10-13", 
+                                                            river_mouth_site_end_date = "2025-01-01",
+                                                            discharge_data = all_tribs_discharge_zscore,
+                                                            run_years = c("20/21","21/22", "22/23", "23/24"))
+tucannon_fitted_DE_plot_era2 <- DE_plot_function(predicted_DE_quantiles = tucannon_predicted_DE_quantiles_era2, 
+                                                 run_year_det_eff_discharge_data = tucannon_det_discharge_data_era2, 
+                                                 plot_name = "Tucannon River (20/21-23/24)")
+
+tucannon_fitted_DE_plot_era2
+
+#### Umatilla River ####
+
+umatilla_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "umatilla_alpha1", 
+                                                 beta = "umatilla_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+umatilla_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Umatilla River", 
+                                                            river_mouth_site = "TMF - Three Mile Falls Dam Combined", 
+                                                            river_mouth_site_start_date = "2006-11-08", 
+                                                            river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("06/07", "07/08", "08/09", "09/10", 
+                                                                        "10/11", "11/12", "12/13", "13/14"))
+umatilla_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = umatilla_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = umatilla_det_discharge_data_era1, 
+                                               plot_name = "Umatilla River (06/07-13/14)")
+
+umatilla_fitted_DE_plot_era1
+
+umatilla_predicted_DE_quantiles_era2 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                   alpha = "umatilla_alpha2", 
+                                                   beta = "umatilla_beta", 
+                                                   niter = 1000, 
+                                                   nchains = 3)
+umatilla_det_discharge_data_era2 <- prep_det_discharge_data(tributary_name = "Umatilla River", 
+                                                            river_mouth_site = "TMF - Three Mile Falls Dam Combined", 
+                                                            river_mouth_site_start_date = "2006-11-08", 
+                                                            river_mouth_site_end_date = "2025-01-01",
+                                                            discharge_data = all_tribs_discharge_zscore,
+                                                            run_years = c("14/15", "15/16", "16/17", "17/18", "18/19", 
+                                                                          "19/20", "20/21","21/22", "22/23", "23/24"))
+umatilla_fitted_DE_plot_era2 <- DE_plot_function(predicted_DE_quantiles = umatilla_predicted_DE_quantiles_era2, 
+                                                 run_year_det_eff_discharge_data = umatilla_det_discharge_data_era2, 
+                                                 plot_name = "Umatilla River (14/15-23/24)")
+
+umatilla_fitted_DE_plot_era2
+
+#### Walla Walla River ####
+
+# The Walla Walla tributary DE calculation is an exception, because it has
+# four different eras, where one era has two sites that jointly act
+# as the river mouth site
+
+# ORB by itself
+walla_walla_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "walla_walla_alpha1", 
+                                                 beta = "walla_walla_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+walla_walla_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Walla Walla River", 
+                                                               river_mouth_site = "ORB - Oasis Road Bridge", 
+                                                               river_mouth_site_start_date = "2005-04-15", 
+                                                               river_mouth_site_end_date = "2015-05-04",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("05/06", "06/07", "07/08", "08/09", "09/10", 
+                                                                        "10/11", "11/12"))
+walla_walla_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = walla_walla_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = walla_walla_det_discharge_data_era1, 
+                                               plot_name = "Walla Walla River (05/06-11/12)")
+
+walla_walla_fitted_DE_plot_era1
+
+# ORB and PRV together
+walla_walla_predicted_DE_quantiles_era2 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                   alpha = "walla_walla_alpha2", 
+                                                   beta = "walla_walla_beta", 
+                                                   niter = 1000, 
+                                                   nchains = 3)
+walla_walla_det_discharge_data_era2 <- prep_det_discharge_data(tributary_name = "Walla Walla River", 
+                                                               river_mouth_site = c("ORB - Oasis Road Bridge",
+                                                                                    "PRV - Walla Walla R at Pierce RV Prk"), 
+                                                               river_mouth_site_start_date = "2012-09-25", 
+                                                               river_mouth_site_end_date = "2015-05-04",
+                                                            discharge_data = all_tribs_discharge_zscore,
+                                                            run_years = c("12/13", "13/14", "14/15"))
+walla_walla_fitted_DE_plot_era2 <- DE_plot_function(predicted_DE_quantiles = walla_walla_predicted_DE_quantiles_era2, 
+                                                 run_year_det_eff_discharge_data = walla_walla_det_discharge_data_era2, 
+                                                 plot_name = "Walla Walla River (12/13-14/15)")
+
+walla_walla_fitted_DE_plot_era2
+
+# PRV by itself
+walla_walla_predicted_DE_quantiles_era3 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                      alpha = "walla_walla_alpha3", 
+                                                      beta = "walla_walla_beta", 
+                                                      niter = 1000, 
+                                                      nchains = 3)
+walla_walla_det_discharge_data_era3 <- prep_det_discharge_data(tributary_name = "Walla Walla River", 
+                                                               river_mouth_site = "PRV - Walla Walla R at Pierce RV Prk", 
+                                                               river_mouth_site_start_date = "2012-09-25", 
+                                                               river_mouth_site_end_date = "2019-04-08",
+                                                               discharge_data = all_tribs_discharge_zscore,
+                                                               run_years = c("15/16", "16/17", "17/18", "18/19"))
+walla_walla_fitted_DE_plot_era3 <- DE_plot_function(predicted_DE_quantiles = walla_walla_predicted_DE_quantiles_era3, 
+                                                    run_year_det_eff_discharge_data = walla_walla_det_discharge_data_era3, 
+                                                    plot_name = "Walla Walla River (15/16-18/19)")
+
+walla_walla_fitted_DE_plot_era3
+
+# WWB
+walla_walla_predicted_DE_quantiles_era4 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                      alpha = "walla_walla_alpha4", 
+                                                      beta = "walla_walla_beta", 
+                                                      niter = 1000, 
+                                                      nchains = 3)
+walla_walla_det_discharge_data_era4 <- prep_det_discharge_data(tributary_name = "Walla Walla River", 
+                                                                river_mouth_site = "WWB - Walla Walla River Barge Array", 
+                                                                river_mouth_site_start_date = "2019-04-11", 
+                                                                river_mouth_site_end_date = "2025-01-01",
+                                                               discharge_data = all_tribs_discharge_zscore,
+                                                               run_years = c("19/20", "20/21","21/22", "22/23", "23/24"))
+walla_walla_fitted_DE_plot_era4 <- DE_plot_function(predicted_DE_quantiles = walla_walla_predicted_DE_quantiles_era4, 
+                                                    run_year_det_eff_discharge_data = walla_walla_det_discharge_data_era4, 
+                                                    plot_name = "Walla Walla River (19/20-23/24)")
+
+walla_walla_fitted_DE_plot_era4
+
+#### Wenatchee River ####
+
+wenatchee_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "wenatchee_alpha1", 
+                                                 beta = "wenatchee_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+wenatchee_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Wenatchee River", 
+                                                             river_mouth_site = "LWE - Lower Wenatchee River", 
+                                                             river_mouth_site_start_date = "2011-01-05", 
+                                                             river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c("10/11", "11/12", "12/13", "13/14", 
+                                                                        "14/15", "15/16", "16/17", "17/18", 
+                                                                        "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+wenatchee_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = wenatchee_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = wenatchee_det_discharge_data_era1, 
+                                               plot_name = "Wenatchee River (10/11-23/24)")
+
+wenatchee_fitted_DE_plot_era1
+
+#### Yakima River ####
+
+yakima_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
+                                                 alpha = "yakima_alpha1", 
+                                                 beta = "yakima_beta", 
+                                                 niter = 1000, 
+                                                 nchains = 3)
+yakima_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Yakima River", 
+                                                          river_mouth_site = "PRO - Prosser Diversion Dam Combined", 
+                                                          river_mouth_site_start_date = "2004-10-19", 
+                                                          river_mouth_site_end_date = "2025-01-01",
+                                                          discharge_data = all_tribs_discharge_zscore,
+                                                          run_years = c( "05/06", "06/07", "07/08", "08/09", "09/10",
+                                                                         "10/11", "11/12", "12/13", "13/14", 
+                                                                         "14/15", "15/16", "16/17", "17/18", 
+                                                                         "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+yakima_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = yakima_predicted_DE_quantiles_era1, 
+                                               run_year_det_eff_discharge_data = yakima_det_discharge_data_era1, 
+                                               plot_name = "Yakima River (05/06-23/24)")
+
+yakima_fitted_DE_plot_era1
+```
 
