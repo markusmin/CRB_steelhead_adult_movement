@@ -235,16 +235,11 @@ forebay_v_tailrace(forebay_t = WEL_temp_f_long, tailrace_t = WEL_temp_t_long, da
 # Plot time series of temperature throughout the year
 plot_temp_ts(forebay_t = BON_temp_f_long, tailrace_t = BON_temp_t_long, dam = "BON")
 plot_temp_ts(forebay_t = ICH_temp_f_long, tailrace_t = ICH_temp_t_long, dam = "ICH")
-plot_temp_ts(forebay_t = JDA_temp_f_long, tailrace_t = JDA_temp_t_long, dam = "JDA")
-plot_temp_ts(forebay_t = LGO_temp_f_long, tailrace_t = LGO_temp_t_long, dam = "LGO")
 plot_temp_ts(forebay_t = LGR_temp_f_long, tailrace_t = LGR_temp_t_long, dam = "LGR")
-plot_temp_ts(forebay_t = LMO_temp_f_long, tailrace_t = LMO_temp_t_long, dam = "LMO")
 plot_temp_ts(forebay_t = MCN_temp_f_long, tailrace_t = MCN_temp_t_long, dam = "MCN")
 plot_temp_ts(forebay_t = PRA_temp_f_long, tailrace_t = PRA_temp_t_long, dam = "PRA")
 plot_temp_ts(forebay_t = RIS_temp_f_long, tailrace_t = RIS_temp_t_long, dam = "RIS")
 plot_temp_ts(forebay_t = RRE_temp_f_long, tailrace_t = RRE_temp_t_long, dam = "RRE")
-plot_temp_ts(forebay_t = TDA_temp_f_long, tailrace_t = TDA_temp_t_long, dam = "TDA")
-plot_temp_ts(forebay_t = WAN_temp_f_long, tailrace_t = WAN_temp_t_long, dam = "WAN")
 plot_temp_ts(forebay_t = WEL_temp_f_long, tailrace_t = WEL_temp_t_long, dam = "WEL")
 
 # There are some clear outliers in both the forebay and tailrace temperatures that need to be filtered
@@ -731,10 +726,9 @@ ICH_temp_ts <- dplyr::select(temp_mod_est, date, ICH)
 LGR_temp_ts <- dplyr::select(temp_mod_est, date, LGR)
 
 ## Load fish movement data to calculate windows
-# Note that the wild and hatchery folders in Stan have the same movement data
-snake_adults_states_complete <- read.csv(here::here("Stan", "snake_river_wild", "snake_adults_states_complete.csv"))
-midcol_adults_states_complete <- read.csv(here::here("Stan", "middle_columbia_wild", "middle_columbia_adults_states_complete.csv"))
-uppcol_adults_states_complete <- read.csv(here::here("Stan", "upper_columbia_wild", "upper_columbia_adults_states_complete.csv"))
+snake_adults_states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", "snake_adults_states_complete.csv"))
+midcol_adults_states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", "middle_columbia_adults_states_complete.csv"))
+uppcol_adults_states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", "upper_columbia_adults_states_complete.csv"))
 
 # combine all
 snake_adults_states_complete %>% 
@@ -1531,36 +1525,6 @@ write.csv(january_spill_df, here::here("Data", "covariate_data", "model_inputs",
 write.csv(february_spill_df, here::here("Data", "covariate_data", "model_inputs", "february_spill_df_for_stan.csv"))
 write.csv(march_spill_df, here::here("Data", "covariate_data", "model_inputs", "march_spill_df_for_stan.csv"))
 write.csv(april_spill_df, here::here("Data", "covariate_data", "model_inputs", "april_spill_df_for_stan.csv"))
-
-## Export another copy in the folders where the Stan models are being run
-write.csv(january_spill_df, here::here("Stan", "middle_columbia_wild", "january_spill_df.csv"))
-write.csv(january_spill_df, here::here("Stan", "middle_columbia_hatchery", "january_spill_df.csv"))
-write.csv(january_spill_df, here::here("Stan", "upper_columbia_wild", "january_spill_df.csv"))
-write.csv(january_spill_df, here::here("Stan", "upper_columbia_hatchery", "january_spill_df.csv"))
-write.csv(january_spill_df, here::here("Stan", "snake_river_wild", "january_spill_df.csv"))
-write.csv(january_spill_df, here::here("Stan", "snake_river_hatchery", "january_spill_df.csv"))
-
-write.csv(february_spill_df, here::here("Stan", "middle_columbia_wild", "february_spill_df.csv"))
-write.csv(february_spill_df, here::here("Stan", "middle_columbia_hatchery", "february_spill_df.csv"))
-write.csv(february_spill_df, here::here("Stan", "upper_columbia_wild", "february_spill_df.csv"))
-write.csv(february_spill_df, here::here("Stan", "upper_columbia_hatchery", "february_spill_df.csv"))
-write.csv(february_spill_df, here::here("Stan", "snake_river_wild", "february_spill_df.csv"))
-write.csv(february_spill_df, here::here("Stan", "snake_river_hatchery", "february_spill_df.csv"))
-
-write.csv(march_spill_df, here::here("Stan", "middle_columbia_wild", "march_spill_df.csv"))
-write.csv(march_spill_df, here::here("Stan", "middle_columbia_hatchery", "march_spill_df.csv"))
-write.csv(march_spill_df, here::here("Stan", "upper_columbia_wild", "march_spill_df.csv"))
-write.csv(march_spill_df, here::here("Stan", "upper_columbia_hatchery", "march_spill_df.csv"))
-write.csv(march_spill_df, here::here("Stan", "snake_river_wild", "march_spill_df.csv"))
-write.csv(march_spill_df, here::here("Stan", "snake_river_hatchery", "march_spill_df.csv"))
-
-write.csv(april_spill_df, here::here("Stan", "middle_columbia_wild", "april_spill_df.csv"))
-write.csv(april_spill_df, here::here("Stan", "middle_columbia_hatchery", "april_spill_df.csv"))
-write.csv(april_spill_df, here::here("Stan", "upper_columbia_wild", "april_spill_df.csv"))
-write.csv(april_spill_df, here::here("Stan", "upper_columbia_hatchery", "april_spill_df.csv"))
-write.csv(april_spill_df, here::here("Stan", "snake_river_wild", "april_spill_df.csv"))
-write.csv(april_spill_df, here::here("Stan", "snake_river_hatchery", "april_spill_df.csv"))
-
 
 
 
