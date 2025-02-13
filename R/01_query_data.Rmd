@@ -430,3 +430,64 @@ Select each of the following data:
 Download as CSV in Data/covariate_data/CBR_DART
 - Store in a folder with the dam abbreviation
 - Name files with paste0(dam, variable, query date)
+
+##### Bonus code
+
+```{r}
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_1.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 1) -> tag_codes_1
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_2.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 2) -> tag_codes_2
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_3.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 3) -> tag_codes_3
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_4.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 4) -> tag_codes_4
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_5.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 5) -> tag_codes_5
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_6.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 6) -> tag_codes_6
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_7.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 7) -> tag_codes_7
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_8.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 8) -> tag_codes_8
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_9.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 9) -> tag_codes_9
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_10.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 10) -> tag_codes_10
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_11.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 11) -> tag_codes_11
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_12.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 12) -> tag_codes_12
+read.table(here::here("Data", "PTAGIS_queries", "tag_codes", "tag_codes_13.txt")) %>% 
+  dplyr::rename(tag_code = V1) %>% 
+  mutate(file = 13) -> tag_codes_13
+tag_codes_1 %>% 
+  bind_rows(., tag_codes_2) %>% 
+  bind_rows(., tag_codes_3) %>% 
+  bind_rows(., tag_codes_4) %>% 
+  bind_rows(., tag_codes_5) %>% 
+  bind_rows(., tag_codes_6) %>% 
+  bind_rows(., tag_codes_7) %>% 
+  bind_rows(., tag_codes_8) %>% 
+  bind_rows(., tag_codes_9) %>% 
+  bind_rows(., tag_codes_10) %>% 
+  bind_rows(., tag_codes_11) %>% 
+  bind_rows(., tag_codes_12) %>% 
+  bind_rows(., tag_codes_13) -> tag_code_file_finder
+
+write.table(tag_code_file_finder, here::here("Data", "PTAGIS_queries", "tag_codes", "tag_code_file_finder.txt"), row.names = FALSE)
+```
+
+
