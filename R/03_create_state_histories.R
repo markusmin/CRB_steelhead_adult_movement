@@ -1,7 +1,6 @@
 #### 03: create state histories
 
 # load libraries
-unloadNamespace("plyr")
 library(tidyverse)
 library(lubridate)
 library(here)
