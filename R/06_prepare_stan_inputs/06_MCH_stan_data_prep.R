@@ -6,7 +6,7 @@ library(cmdstanr)
 library(posterior)
 library(tidyverse)
 library(lubridate)
-library(here)
+# library(here)
 
 #### SECTION 1: MODEL SETUP ####
 # Create a transition matrix of 1s and 0s for movements from (rows) to (columns)
@@ -421,14 +421,17 @@ river_mouth_indices <- upstream_indices - 1
 ##### Step 1: Load and filter states data #####
 
 # Load states complete
-states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", 
-                                       "middle_columbia_adults_states_complete.csv"), row.names = 1)
+# states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", 
+#                                        "middle_columbia_adults_states_complete.csv"), row.names = 1)
+states_complete <- read.csv("intermediate_outputs/adults_states_complete/middle_columbia_adults_states_complete.csv", row.names = 1)
 
 ### KEEP ONLY THE HATCHERY ORIGIN FISH
-tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
+# tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
+tag_code_metadata <- read.csv("Data/covariate_data/tag_code_metadata.csv")
 # keep only the fish that are in the dataset
 tag_code_metadata <- subset(tag_code_metadata, tag_code %in% states_complete$tag_code)
-natal_origin_table <- read.csv(here::here("Data", "covariate_data", "natal_origin_table.csv"))
+# natal_origin_table <- read.csv(here::here("Data", "covariate_data", "natal_origin_table.csv"))
+natal_origin_table <- read.csv("Data/covariate_data/natal_origin_table.csv")
 tag_code_metadata %>% 
   left_join(., natal_origin_table, by = "release_site_name") -> tag_code_metadata
 
@@ -724,8 +727,8 @@ for (i in 1:length(trapped_fish_indices)){
 ##### Load and reformat tributary data for detection efficiency #####
 
 # Load tributary discharge data
-# tributary_discharge_data <- read.csv("tributary_discharge_data.csv")
-tributary_discharge_data <- read.csv(here::here("Data", "covariate_data", "model_inputs", "tributary_discharge_data_zscore.csv"))
+# tributary_discharge_data <- read.csv(here::here("Data", "covariate_data", "model_inputs", "tributary_discharge_data_zscore.csv"))
+tributary_discharge_data <- read.csv("Data/covariate_data/model_inputs/tributary_discharge_data_zscore.csv")
 
 # Get tributary categorical data (equipment eras)
 # this by run year
@@ -779,7 +782,7 @@ tributary_discharge_data <- read.csv(here::here("Data", "covariate_data", "model
 # Yakima River 1: 04/05 - 23/24
 
 # Total eras: 20
-# Total tribs: 13 (17 total - Clearwater, Grande Ronde, and Salmon; also Hood has now been removed as a state)
+# Total tribs: 13 (17 total - Clearwater, Grande Ronde, and Salmon; also Hood River has now been removed as a state)
 
 # So the first 20 columns are the era/intercept terms, then the next 13 are the slope terms for discharge
 
@@ -787,7 +790,7 @@ tributary_discharge_data <- read.csv(here::here("Data", "covariate_data", "model
 
 # Our parameter vector will also be a column vector of length 33
 
-tributary_design_matrix <- matrix(0, nrow = 20, ncol = 35)
+tributary_design_matrix <- matrix(0, nrow = 20, ncol = 33)
 
 # This is to make it easier to tell indexing
 rownames(tributary_design_matrix) <- paste0(run_year_df$run_year[1:(nrow(run_year_df)-1)], "-", seq(1,20,1))
@@ -1022,7 +1025,8 @@ trib_det_eff_order <- c("Asotin_Creek",
 
 
 ##### Reformat origin information #####
-tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
+# tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
+tag_code_metadata <- read.csv("Data/covariate_data/tag_code_metadata.csv")
 # keep only the fish that are in the dataset
 # This keeps only hatchery origin fish
 tag_code_metadata <- subset(tag_code_metadata, tag_code %in% states_complete$tag_code)
@@ -1048,7 +1052,8 @@ origin_numeric <- data.frame(natal_origin = c("Asotin_Creek",
                                               "Yakima_River"),
                              natal_origin_numeric = seq(1,16,1))
 
-natal_origin_table <- read.csv(here::here("Data", "covariate_data", "natal_origin_table.csv"))
+# natal_origin_table <- read.csv(here::here("Data", "covariate_data", "natal_origin_table.csv"))
+natal_origin_table <- read.csv("Data/covariate_data/natal_origin_table.csv")
 tag_code_metadata %>% 
   left_join(., natal_origin_table, by = "release_site_name") %>% 
   left_join(., origin_numeric, by = "natal_origin") -> tag_code_metadata
@@ -1288,7 +1293,8 @@ run_year_DE_array[3,18,2:20] <- 1
 
 
 # Load the data from the detection efficiency model to use as priors in this model
-det_eff_param_posteriors <- as.matrix(read.csv(here::here("Stan", "detection_efficiency", "det_eff_param_posteriors.csv"), row.names = 1))
+# det_eff_param_posteriors <- as.matrix(read.csv(here::here("Stan", "detection_efficiency", "det_eff_param_posteriors.csv"), row.names = 1))
+det_eff_param_posteriors <- as.matrix(read.csv("Stan/detection_efficiency/det_eff_param_posteriors.csv", row.names = 1))
 
 
 # get a vector of run years that transitions occurred within - need to do this at the end, once you've made all changes to states_complete
@@ -1356,16 +1362,21 @@ as.vector(transition_seasons_numeric)[!(as.vector(transition_seasons_numeric) ==
 
 
 # load in the temperature data
-temp_data <- read.csv(here::here("Data", "covariate_data", "model_inputs","window_temps_for_stan.csv"), row.names = 1)
+# temp_data <- read.csv(here::here("Data", "covariate_data", "model_inputs","window_temps_for_stan.csv"), row.names = 1)
+temp_data <- read.csv("Data/covariate_data/model_inputs/window_temps_for_stan.csv", row.names = 1)
 
 # load the spill data
 # spill windows
-spill_data <- read.csv(here::here("Data", "covariate_data", "model_inputs","window_spill_for_stan.csv"), row.names = 1)
+# spill_data <- read.csv(here::here("Data", "covariate_data", "model_inputs","window_spill_for_stan.csv"), row.names = 1)
+spill_data <- read.csv("Data/covariate_data/model_inputs/window_spill_for_stan.csv", row.names = 1)
 
 # spill days by winter/spring month
-jan_spill_days <- read.csv(here::here("Data", "covariate_data", "model_inputs","january_spill_df_for_stan.csv"), row.names = 1)
-feb_spill_days <- read.csv(here::here("Data", "covariate_data", "model_inputs","february_spill_df_for_stan.csv"), row.names = 1)
-mar_spill_days <- read.csv(here::here("Data", "covariate_data", "model_inputs","march_spill_df_for_stan.csv"), row.names = 1)
+# jan_spill_days <- read.csv(here::here("Data", "covariate_data", "model_inputs","january_spill_df_for_stan.csv"), row.names = 1)
+# feb_spill_days <- read.csv(here::here("Data", "covariate_data", "model_inputs","february_spill_df_for_stan.csv"), row.names = 1)
+# mar_spill_days <- read.csv(here::here("Data", "covariate_data", "model_inputs","march_spill_df_for_stan.csv"), row.names = 1)
+jan_spill_days <- read.csv("Data/covariate_data/model_inputs/january_spill_df_for_stan.csv", row.names = 1)
+feb_spill_days <- read.csv("Data/covariate_data/model_inputs/february_spill_df_for_stan.csv", row.names = 1)
+mar_spill_days <- read.csv("Data/covariate_data/model_inputs/march_spill_df_for_stan.csv", row.names = 1)
 
 # combine these into one df, for total number of winter spill days in Jan/Feb/Mar
 jan_spill_days + feb_spill_days + mar_spill_days -> winter_spill_days
@@ -1622,11 +1633,11 @@ movements_df %>%
 # Determine which movements are within DPS boundaries
 # model_states_df is helpful in this regard
 
-middle_columbia_movements <- subset(movements_df, row %in% c(2,3,seq(10,23,1),41) |
-                                      col %in% c(2,3,seq(10,23,1),41))
+middle_columbia_movements <- subset(movements_df, row %in% c(2,3,seq(10,21,1),39) |
+                                      col %in% c(2,3,seq(10,21,1),39))
 
-non_middle_columbia_movements  <- subset(movements_df, !(row %in% c(2,3,seq(10,23,1),41)) &
-                                           !(col %in% c(2,3,seq(10,23,1),41)))
+non_middle_columbia_movements  <- subset(movements_df, !(row %in% c(2,3,seq(10,21,1),39)) &
+                                           !(col %in% c(2,3,seq(10,21,1),39)))
 
 # I think these both need to be order by from (rows), to (columns)
 middle_columbia_movements %>% 
@@ -1892,7 +1903,6 @@ for (i in 1:2){ # since we only have two origins for hatchery
   cat ("\n")
 }
 
-# In this ESU, there are four origins, so we will have three origin parameters
 # We will only allow an origin effect within the ESU (so after PRA). Before, they will only have an intercept term
 # print declaration of borigin parameters
 for (i in 1:2){ # since we only have two origins for MCH, we will only go i in 1:2
@@ -1974,8 +1984,19 @@ for (i in 1:2){ # since we only have two origins for MCH
 for (i in 1:2){ # since we only have two origins for MCH
   for (j in 1:nrow(middle_columbia_RE_year)){
     
+    # If this is a post-overshoot fallback movement, print out a commented out version
+    # Origin 1: Umatilla River: 4-3 and 3-2 are both post-overshoot fallback movements within the DPS
+    # Origin 2: Walla Walla River: 4-3 is a post-overshoot fallback movement within the DPS
+    if(middle_columbia_RE_year$row[j] == 3 & middle_columbia_RE_year$col[j] == 2 & i == 1){
+      cat("// real<lower=0> ", "sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
+    } 
+    
+    else if (middle_columbia_RE_year$row[j] == 4 & middle_columbia_RE_year$col[j] == 3) {
+      cat("// real<lower=0> ", "sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
+    }
+    
     # Movements from mainstem to river mouth: print two versions
-    if (middle_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
+    else if (middle_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
       cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
       cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], "_NDE", ";", "\n", sep = "")
     }
@@ -2530,8 +2551,19 @@ for (i in 1:2){ # since we only have two origins for MCH
 for (i in 1:2){ # since we only have two origins for MCH
   for (j in 1:nrow(middle_columbia_RE_year)){
     
+    # If this is a post-overshoot fallback movement, print out a commented out version
+    # Origin 1: Umatilla River: 4-3 and 3-2 are both post-overshoot fallback movements within the DPS
+    # Origin 2: Walla Walla River: 4-3 is a post-overshoot fallback movement within the DPS
+    if(middle_columbia_RE_year$row[j] == 3 & middle_columbia_RE_year$col[j] == 2 & i == 1){
+      cat("// sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], " ~ cauchy(0,1);", "\n", sep = "")
+    } 
+    
+    else if (middle_columbia_RE_year$row[j] == 4 & middle_columbia_RE_year$col[j] == 3) {
+      cat("// sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], " ~ cauchy(0,1);", "\n", sep = "")
+    }
+    
     # Movements from mainstem to river mouth: print two versions
-    if (middle_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
+    else if (middle_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
       cat("sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], "_DE", " ~ cauchy(0,1);", "\n", sep = "")
       cat("sigma_yearxorigin", i, "_vector_", middle_columbia_RE_year$row[j], "_", middle_columbia_RE_year$col[j], "_NDE", " ~ cauchy(0,1);", "\n", sep = "")
     }
@@ -2565,23 +2597,25 @@ for (i in 1:2){ # since we only have two origins for MCH
 ##### Take all outputs from above and export as a single data file for model fitting #####
 
 # step 0: data in a list #
-data <- list(y = state_data_2, n_ind = n.ind, n_obs = n.obs, possible_movements = possible_movements,
-             states_mat = states_mat, max_visits = dim(state_data_2)[2],
-             movements = movements, not_movements = not_movements,
-             nmovements = nmovements, parameter_indices_matrix = parameter_indices_matrix,
-             transition_dates = transition_date_numeric, transition_seasons_vector = transition_seasons_vector, temperature_data = as.matrix(temp_data),
-             spill_window_data = as.matrix(spill_data), winter_spill_days_data = as.matrix(winter_spill_days),
-             winter_post_overshoot_vector = winter_post_overshoot_vector,
-             n_notmovements = n_notmovements, possible_states = transition_matrix, cat_X_mat = cat_X_mat_actual, temp_X_mat = temp_X_mat_actual, year_X_mat = year_X_mat_actual,
-             grainsize = 1, N = dim(state_data_2)[1],
-             # New data for detection efficiency
-             tributary_design_matrices_array = tributary_design_matrices_array,
-             ntransitions = ntransitions,
-             transition_run_years = transition_run_years,
-             nyears = max(transition_run_years),
-             run_year_DE_array = run_year_DE_array,
-             det_eff_param_posteriors = det_eff_param_posteriors)
+  data <- list(y = state_data_2, n_ind = n.ind, n_obs = n.obs, possible_movements = possible_movements,
+               states_mat = states_mat, max_visits = dim(state_data_2)[2],
+               movements = movements, not_movements = not_movements,
+               nmovements = nmovements, parameter_indices_matrix = parameter_indices_matrix,
+               n_states = nrow(transition_matrix), n_temp_days = nrow(temp_data),
+               transition_dates = transition_date_numeric, transition_seasons_vector = transition_seasons_vector, temperature_data = as.matrix(temp_data),
+               spill_window_data = as.matrix(spill_data), winter_spill_days_data = as.matrix(winter_spill_days),
+               winter_post_overshoot_vector = winter_post_overshoot_vector,
+               n_notmovements = n_notmovements, possible_states = transition_matrix, cat_X_mat = cat_X_mat_actual, temp_X_mat = temp_X_mat_actual, year_X_mat = year_X_mat_actual,
+               grainsize = 1, N = dim(state_data_2)[1],
+               # New data for detection efficiency
+               tributary_design_matrices_array = tributary_design_matrices_array,
+               ntransitions = ntransitions,
+               transition_run_years = transition_run_years,
+               nyears = max(transition_run_years),
+               run_year_DE_array = run_year_DE_array,
+               det_eff_param_posteriors = det_eff_param_posteriors)
 
 
 
-save(data, file = "model_data.rda")
+# save(data, file = here::here("Stan", "middle_columbia_hatchery", "MCH_model_data.rda"))
+save(data, file = "Stan/middle_columbia_hatchery/MCH_model_data.rda")
