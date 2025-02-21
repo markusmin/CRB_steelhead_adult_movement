@@ -15,13 +15,14 @@ library(ggrepel)
 library(cmdstanr)
 library(bayesplot)
 library(posterior)
+library(ggpubr)
 
 # DO NOT load plyr - it will cause numerous naming conflicts with dplyr and basically break anything.
 # Instead, just copy the source code for any specific functions that we need.
 round_any = function(x, accuracy, f=round){f(x/ accuracy) * accuracy}
 
 # load detection history data that we'll need to calculate tributary detection efficiency
-det_hist <- read.csv(here::here("intermediate_outputs", "complete_det_hist_postprocessed.csv"), row.names = 1)
+complete_det_hist <- read.csv(here::here("intermediate_outputs", "complete_det_hist_postprocessed.csv"), row.names = 1)
 ```
 
 ```{r define_functions, echo = FALSE, warning = FALSE, message = FALSE}
@@ -341,7 +342,7 @@ annual_det_eff <- function(tributary_name, river_mouth_site,
   # identify which sites are upstream of the river mouth
   upstream_sites <- subset(trib_sites, event_site_name != river_mouth_site)$event_site_name
   # subset total df to only detections from that tributary
-  trib_det <- subset(det_hist, event_site_name %in% trib_sites$event_site_name)
+  trib_det <- subset(complete_det_hist, event_site_name %in% trib_sites$event_site_name)
   
   # Get the detections + times of fish at upstream sites
   trib_det %>% 
@@ -416,7 +417,7 @@ run_year_det_eff <- function(tributary_name, river_mouth_site,
   # identify which sites are upstream of the river mouth
   upstream_sites <- subset(trib_sites, event_site_name != river_mouth_site)$event_site_name
   # subset total df to only detections from that tributary
-  trib_det <- subset(det_hist, event_site_name %in% trib_sites$event_site_name)
+  trib_det <- subset(complete_det_hist, event_site_name %in% trib_sites$event_site_name)
   
   # Get the detections + times of fish at upstream sites
   trib_det %>% 
@@ -508,7 +509,7 @@ plot_arrival_timing <- function(tributary_name, river_mouth_site,
   # identify which sites are upstream of the river mouth
   upstream_sites <- subset(trib_sites, event_site_name != river_mouth_site)$event_site_name
   # subset total df to only detections from that tributary
-  trib_det <- subset(det_hist, event_site_name %in% trib_sites$event_site_name)
+  trib_det <- subset(complete_det_hist, event_site_name %in% trib_sites$event_site_name)
   
   # Get the detections + times of fish at upstream sites
   trib_det %>% 
@@ -2198,7 +2199,7 @@ DE_param_draws %>%
 
 ```
 
-```{r define_functions_plot_detection_efficiency_model_fit, eval = FALSE}
+```{r define_functions_plot_detection_efficiency_model_fit}
 # Predict detection efficiency for a specific tributary/time period
 predict_DE <- function(draws_object, alpha, beta, niter, nchains){
   
@@ -2311,8 +2312,8 @@ asotin_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Asot
                            river_mouth_site_end_date = "2025-01-01",
                            discharge_data = all_tribs_discharge_zscore,
                            run_years = c("11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18"))
-asotin_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = asotin_predicted_DE_quantiles, 
-                 run_year_det_eff_discharge_data = asotin_det_discharge_data, 
+asotin_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = asotin_predicted_DE_quantiles_era1, 
+                 run_year_det_eff_discharge_data = asotin_det_discharge_data_era1, 
                  plot_name = "Asotin Creek (11/12-17/18)")
 
 asotin_fitted_DE_plot_era1
@@ -2345,10 +2346,10 @@ deschutes_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "D
                                                              river_mouth_site_start_date = "2013-03-13", 
                                                              river_mouth_site_end_date = "2025-01-01",
                                                           discharge_data = all_tribs_discharge_zscore,
-                                                          run_years = c("13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20"))
+                                                          run_years = c("13/14", "14/15", "15/16", "16/17", "17/18", "18/19"))
 deschutes_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = deschutes_predicted_DE_quantiles_era1, 
                                                run_year_det_eff_discharge_data = deschutes_det_discharge_data_era1, 
-                                               plot_name = "Deschutes River (13/14-19/20)")
+                                               plot_name = "Deschutes River (13/14-18/19)")
 
 deschutes_fitted_DE_plot_era1
  
@@ -2415,7 +2416,7 @@ entiat_fitted_DE_plot_era1
 #                                                run_year_det_eff_discharge_data = imnaha_det_discharge_data_era1, 
 #                                                plot_name = "Imnaha River (10/11-23/24)")
 
-imnaha_fitted_DE_plot_era1
+# imnaha_fitted_DE_plot_era1
 
 #### John Day River ####
 
@@ -2694,5 +2695,30 @@ yakima_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = yakima_p
                                                plot_name = "Yakima River (05/06-23/24)")
 
 yakima_fitted_DE_plot_era1
+```
+
+```{r export_fits}
+ggarrange(umatilla_fitted_DE_plot_era1, 
+          umatilla_fitted_DE_plot_era2,
+                       walla_walla_fitted_DE_plot_era1,
+                       walla_walla_fitted_DE_plot_era2,
+                       walla_walla_fitted_DE_plot_era3,
+          walla_walla_fitted_DE_plot_era4,
+                       yakima_fitted_DE_plot_era1,
+                       deschutes_fitted_DE_plot_era1,
+                       john_day_fitted_DE_plot_era1,
+                       okanogan_fitted_DE_plot_era1,
+                       wenatchee_fitted_DE_plot_era1,
+                       entiat_fitted_DE_plot_era1,
+                       methow_fitted_DE_plot_era1,
+                       methow_fitted_DE_plot_era2,
+                       asotin_fitted_DE_plot_era1,
+                       asotin_fitted_DE_plot_era2,
+                       tucannon_fitted_DE_plot_era1,
+                       tucannon_fitted_DE_plot_era2, ncol = 4, nrow = 5) -> DE_plots
+
+ggsave(here::here("figures", "DE_plots.pdf"), DE_plots, height = 15, width = 20)
+
+# should plot Imnaha and Fifteenmile as intercept only
 ```
 
