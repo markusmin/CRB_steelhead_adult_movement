@@ -1061,6 +1061,7 @@ create_state_history <- function(data_quartile){
     tag_code_subset <- det_hist_tag_codes[!(det_hist_tag_codes %in% c(first_quarter_tag_codes, second_quarter_tag_codes, third_quarter_tag_codes))]
   } else {print ("ERROR: data_quartile argument can only take as arguments integers 1-4")}
   # then, subset the full det_hist object to only include that one quartile of the data
+  
   det_hist <- subset(det_hist, tag_code %in% tag_code_subset)
   
   # Start a counter for which tag code
@@ -2078,13 +2079,13 @@ create_state_history <- function(data_quartile){
                 index_order <- seq(mainstem_index_previous, mainstem_index_current, by = -1)
                 
                 # Get the missing sites
-                missing_sites <- site_order_notrib_columbia[index_order]
+                missing_sites <- site_order_notrib_snake[index_order]
                 
                 # Count the number of sites you need to add and loop through
                 for (j in 1:(length(index_order))) {
                   ### EDIT 2022-07-16
                   index_order <- seq(mainstem_index_previous, mainstem_index_current, by = -1)
-                  missing_sites <- site_order_notrib_columbia[index_order]
+                  missing_sites <- site_order_notrib_snake[index_order]
                   ### end edit
                   # Add a row for each of them
                   
@@ -2102,7 +2103,7 @@ create_state_history <- function(data_quartile){
                   ### EDIT 2022-07-16: flipping the order of site here (as we have done in other parts of the for loop)
                   index_order <- seq(mainstem_index_current, mainstem_index_previous, by = 1)
                   
-                  missing_sites <- site_order_notrib_columbia[index_order]
+                  missing_sites <- site_order_notrib_snake[index_order]
                   
                   missing_site <- missing_sites[j]
                   ### End edit
@@ -3825,7 +3826,7 @@ create_state_history <- function(data_quartile){
                   # Insert a new row into stepwise states, with the implicit detection site
                   # Tag code, state, and time (which is NA)
                   missing_site <-
-                    site_order_notrib_columbia[index_order[1 + j]]
+                    site_order_notrib_snake[index_order[1 + j]]
                   implicit_state <- data.frame(tag_code = det_hist[i, 'tag_code'],
                                                state = missing_site,
                                                date_time = NA,
@@ -3845,8 +3846,7 @@ create_state_history <- function(data_quartile){
                     index_order <- seq(missing_index, previous_index, by = -1)
                   }
                   
-                  # missing_site <- site_order_notrib_columbia[index_order[j+1]]
-                  missing_site <- site_order_notrib_columbia[index_order[j]]
+                  missing_site <- site_order_notrib_snake[index_order[j]]
                   
                   implicit_detection <- c(det_hist[i, 'tag_code'],
                                           NA,
@@ -3906,7 +3906,7 @@ create_state_history <- function(data_quartile){
                   # Insert a new row into stepwise states, with the implicit detection site
                   # Tag code, state, and time (which is NA)
                   missing_site <-
-                    site_order_notrib_columbia[index_order[1 + j]]
+                    site_order_notrib_snake[index_order[1 + j]]
                   implicit_state <- data.frame(tag_code = det_hist[i, 'tag_code'],
                                                state = missing_site,
                                                date_time = NA,
@@ -3933,8 +3933,7 @@ create_state_history <- function(data_quartile){
                     index_order <- seq(missing_index, previous_index, by = -1)
                   }
                   
-                  # missing_site <- site_order_notrib_columbia[index_order[j+1]]
-                  missing_site <- site_order_notrib_columbia[index_order[j]]
+                  missing_site <- site_order_notrib_snake[index_order[j]]
                   
                   implicit_detection <- c(det_hist[i, 'tag_code'],
                                           NA,
