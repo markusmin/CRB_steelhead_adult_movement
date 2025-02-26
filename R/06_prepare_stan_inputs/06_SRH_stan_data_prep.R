@@ -1131,16 +1131,16 @@ n.ind <- dim(state_data)[3]
   # origin_numeric is helpful
   for (i in 1:n.ind){
     # Natal origin
-    if (fish_sim_cat_data_actual$natal_origin[i] == 2){ # Clearwater River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Clearwater_River")$natal_origin_numeric){ # Clearwater River
       cat_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 6){ # Grande Ronde River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Grande_Ronde_River")$natal_origin_numeric){ # Grande Ronde River
       cat_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 8){ # Imnaha River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Imnaha_River")$natal_origin_numeric){ # Imnaha River
       cat_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 12){ # Salmon River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Salmon_River")$natal_origin_numeric){ # Salmon River
       cat_X_mat_actual[i,4] <- 1
     }
     else { # for Tucannon River
@@ -1156,19 +1156,19 @@ n.ind <- dim(state_data)[3]
   temp_X_mat_actual[,1] <- 1
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == 2){ # Clearwater River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Clearwater_River")$natal_origin_numeric){ # Clearwater River
       temp_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 6){ # Grande Ronde River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Grande_Ronde_River")$natal_origin_numeric){ # Grande Ronde River
       temp_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 8){ # Imnaha River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Imnaha_River")$natal_origin_numeric){ # Imnaha River
       temp_X_mat_actual[i,4] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 12){ # Salmon River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Salmon_River")$natal_origin_numeric){ # Salmon River
       temp_X_mat_actual[i,5] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 13){ # Tucannon River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Tucannon_River")$natal_origin_numeric){ # Tucannon River
       temp_X_mat_actual[i,6] <- 1
     }
   }
@@ -1178,19 +1178,19 @@ n.ind <- dim(state_data)[3]
   year_X_mat_actual <- matrix(0, nrow = n.ind, ncol = norigins)
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == 2){ # Clearwater River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Clearwater_River")$natal_origin_numeric){ # Clearwater River
       year_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 6){ # Grande Ronde River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Grande_Ronde_River")$natal_origin_numeric){ # Grande Ronde River
       year_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 8){ # Imnaha River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Imnaha_River")$natal_origin_numeric){ # Imnaha River
       year_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 12){ # Salmon River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Salmon_River")$natal_origin_numeric){ # Salmon River
       year_X_mat_actual[i,4] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 13){ # Tucannon River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Tucannon_River")$natal_origin_numeric){ # Tucannon River
       year_X_mat_actual[i,5] <- 1
     }
   }

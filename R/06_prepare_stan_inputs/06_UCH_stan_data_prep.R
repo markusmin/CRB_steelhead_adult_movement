@@ -1126,10 +1126,10 @@ n.ind <- dim(state_data)[3]
   # This is for origin
   for (i in 1:n.ind){
     # Natal origin
-    if (fish_sim_cat_data_actual$natal_origin[i] == 16){ # Wenatchee River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Wenatchee_River")$natal_origin_numeric){ # Wenatchee River
       cat_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 11){ # Okanogan River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Okanogan_River")$natal_origin_numeric){ # Okanogan River
       cat_X_mat_actual[i,2] <- 1
     }
     else { # for Methow River
@@ -1144,13 +1144,13 @@ n.ind <- dim(state_data)[3]
   temp_X_mat_actual[,1] <- 1
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == 16){ # Wenatchee River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Wenatchee_River")$natal_origin_numeric){ # Wenatchee River
       temp_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 11){ # Okanogan River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Okanogan_River")$natal_origin_numeric){ # Okanogan River
       temp_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 10){ # Methow River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Methow_River")$natal_origin_numeric){ # Methow River
       temp_X_mat_actual[i,4] <- 1
     }
   }
@@ -1159,13 +1159,13 @@ n.ind <- dim(state_data)[3]
   year_X_mat_actual <- matrix(0, nrow = n.ind, ncol = 3)
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == 16){ # Wenatchee River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Wenatchee_River")$natal_origin_numeric){ # Wenatchee River
       year_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 11){ # Okanogan River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Okanogan_River")$natal_origin_numeric){ # Okanogan River
       year_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 10){ # Methow River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Methow_River")$natal_origin_numeric){ # Methow River
       year_X_mat_actual[i,3] <- 1
     }
   }

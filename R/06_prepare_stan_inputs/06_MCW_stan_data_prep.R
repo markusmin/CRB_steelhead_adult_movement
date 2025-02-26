@@ -1137,19 +1137,19 @@ n.ind <- dim(state_data)[3]
   # origin_numeric is helpful
   for (i in 1:n.ind){
     # Natal origin
-    if (fish_sim_cat_data_actual$natal_origin[i] == 3){ # Deschutes River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Deschutes_River")$natal_origin_numeric){ # Deschutes River
       cat_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 5){ # Fifteenmile Creek
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Fifteenmile_Creek")$natal_origin_numeric){ # Fifteenmile Creek
       cat_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 9){ # John Day River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "John_Day_River")$natal_origin_numeric){ # John Day River
       cat_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 14){ # Umatilla River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Umatilla_River")$natal_origin_numeric){ # Umatilla River
       cat_X_mat_actual[i,4] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 15){ # Walla Walla River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Walla_Walla_River")$natal_origin_numeric){ # Walla Walla River
       cat_X_mat_actual[i,5] <- 1
     }
     else { # for Yakima River
@@ -1165,22 +1165,22 @@ n.ind <- dim(state_data)[3]
   temp_X_mat_actual[,1] <- 1
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == 3){ # Deschutes River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Deschutes_River")$natal_origin_numeric){ # Deschutes River
       temp_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 5){ # Fifteenmile Creek
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Fifteenmile_Creek")$natal_origin_numeric){ # Fifteenmile Creek
       temp_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 9){ # John Day River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "John_Day_River")$natal_origin_numeric){ # John Day River
       temp_X_mat_actual[i,4] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 14){ # Umatilla River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Umatilla_River")$natal_origin_numeric){ # Umatilla River
       temp_X_mat_actual[i,5] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 15){ # Walla Walla River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Walla_Walla_River")$natal_origin_numeric){ # Walla Walla River
       temp_X_mat_actual[i,6] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 17){ # Yakima River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Yakima_River")$natal_origin_numeric){ # Yakima River
       temp_X_mat_actual[i,7] <- 1
     }
   }
@@ -1190,22 +1190,22 @@ n.ind <- dim(state_data)[3]
   year_X_mat_actual <- matrix(0, nrow = n.ind, ncol = norigins)
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == 3){ # Deschutes River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Deschutes_River")$natal_origin_numeric){ # Deschutes River
       year_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 5){ # Fifteenmile Creek
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Fifteenmile_Creek")$natal_origin_numeric){ # Fifteenmile Creek
       year_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 9){ # John Day River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "John_Day_River")$natal_origin_numeric){ # John Day River
       year_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 14){ # Umatilla River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Umatilla_River")$natal_origin_numeric){ # Umatilla River
       year_X_mat_actual[i,4] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 15){ # Walla Walla River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Walla_Walla_River")$natal_origin_numeric){ # Walla Walla River
       year_X_mat_actual[i,5] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == 17){ # Yakima River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Yakima_River")$natal_origin_numeric){ # Yakima River
       year_X_mat_actual[i,6] <- 1
     }
   }
@@ -1617,7 +1617,6 @@ n.ind <- dim(state_data)[3]
   for(i in 1:nrow(movements2)){
     parameter_indices_matrix[movements2[i, "row"], movements2[i, "col"]] <- i
   }
-  
 
   #### SECTION 3: Write out the model (to be copied to stan model) ####
   
