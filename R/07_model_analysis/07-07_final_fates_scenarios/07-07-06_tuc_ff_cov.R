@@ -18,9 +18,8 @@ library(lubridate)
 
 # set the working directory so that here() will cooperate
 setwd("/gscratch/scrubbed/mmin/")
-library(here)
 
-source(here::here("analysis", "analysis", "14.0-ff-cov-functions.R"))
+source("R/07_model_analysis/07-07_final_fates_scenarios/07-07-01-ff_cov_functions.R")
 
 
 #### Winter spill days comparison ####
@@ -71,7 +70,7 @@ TUC_LGR_winterspill_homing %>%
 
 
 # save output
-save(TUC_LGR_winterspill_homing, file = here::here("stan_actual", "output", "final_fates_covariates", "TUC_LGR_winterspill_homing.rda"))
+save(TUC_LGR_winterspill_homing, file = "figures/final_fates_scenarios/simulation_runs/TUC_LGR_winterspill_homing.rda")
 
 rear_colors <- c(hatchery = "#ff7f00", wild = "#33a02c")
 rear_shapes <- c(17, 19)
@@ -94,4 +93,4 @@ TUC_LGR_winterspill_homing_plot <- ggplot(TUC_LGR_winterspill_homing, aes(x = LG
         axis.text.x = element_text(size = 12)) +
   ggtitle("Homing by Tucannon River Steelhead under different winter spill conditions at Lower Granite Dam")
 
-ggsave(here::here("stan_actual", "output", "final_fates_covariates", "TUC_LGR_winterspill_homing_plot_temps.png"), TUC_LGR_winterspill_homing_plot, height = 8, width = 8)
+ggsave("figures/final_fates_scenarios/TUC_LGR_winterspill_homing_plot_temps.png", TUC_LGR_winterspill_homing_plot, height = 8, width = 8)

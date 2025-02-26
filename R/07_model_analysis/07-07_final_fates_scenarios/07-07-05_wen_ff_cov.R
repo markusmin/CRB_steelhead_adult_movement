@@ -18,9 +18,8 @@ library(lubridate)
 
 # set the working directory so that here() will cooperate
 setwd("/gscratch/scrubbed/mmin/")
-library(here)
 
-source(here::here("analysis", "analysis", "14.0-ff-cov-functions.R"))
+source("R/07_model_analysis/07-07_final_fates_scenarios/07-07-01-ff_cov_functions.R")
 
 
 #### Winter spill days comparison ####
@@ -71,7 +70,7 @@ WEN_RRE_winterspill_homing %>%
 
 
 # save output
-save(WEN_RRE_winterspill_homing, file = here::here("stan_actual", "output", "final_fates_covariates", "WEN_RRE_winterspill_homing.rda"))
+save(WEN_RRE_winterspill_homing, file = "figures/final_fates_scenarios/simulation_runs/WEN_RRE_winterspill_homing.rda")
 
 rear_colors <- c(hatchery = "#ff7f00", wild = "#33a02c")
 rear_shapes <- c(17, 19)
@@ -94,4 +93,4 @@ WEN_RRE_winterspill_homing_plot <- ggplot(WEN_RRE_winterspill_homing, aes(x = RR
   ggtitle("Homing by Wenatchee River Steelhead under different winter spill conditions at Rocky Reach Dam")
 
 
-ggsave(here::here("stan_actual", "output", "final_fates_covariates", "WEN_RRE_winterspill_homing_plot_temps.png"), WEN_RRE_winterspill_homing_plot, height = 8, width = 8)
+ggsave("figures/final_fates_scenarios/WEN_RRE_winterspill_homing_plot_temps.png", WEN_RRE_winterspill_homing_plot, height = 8, width = 8)

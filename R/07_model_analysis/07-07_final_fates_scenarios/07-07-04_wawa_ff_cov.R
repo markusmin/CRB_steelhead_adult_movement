@@ -18,9 +18,8 @@ library(lubridate)
 
 # set the working directory so that here() will cooperate
 setwd("/gscratch/scrubbed/mmin/")
-library(here)
 
-source(here::here("analysis", "analysis", "14.0-ff-cov-functions.R"))
+source("R/07_model_analysis/07-07_final_fates_scenarios/07-07-01-ff_cov_functions.R")
 
 
 #### Winter spill days comparison ####
@@ -64,7 +63,7 @@ WAWA_ICH_winterspill_homing %>%
 WAWA_ICH_winterspill_homing %>% 
   left_join(rep_years, by = "fix_run_year") -> WAWA_ICH_winterspill_homing
 
-save(WAWA_ICH_winterspill_homing, file = here::here("stan_actual", "output", "final_fates_covariates", "WAWA_ICH_winterspill_homing.rda"))
+save(WAWA_ICH_winterspill_homing, file = "figures/final_fates_scenarios/simulation_runs/WAWA_ICH_winterspill_homing.rda")
 
 rear_colors <- c(hatchery = "#ff7f00", wild = "#33a02c")
 rear_shapes <- c(17, 19)
@@ -88,4 +87,4 @@ WAWA_ICH_winterspill_homing_plot <- ggplot(WAWA_ICH_winterspill_homing, aes(x = 
         axis.text.x = element_text(size = 12)) +
   ggtitle("Homing by Walla Walla River Steelhead under different winter spill conditions at Ice Harbor Dam")
 
-ggsave(here::here("stan_actual", "output", "final_fates_covariates", "WAWA_ICH_winterspill_homing_plot_temps.png"), WAWA_ICH_winterspill_homing_plot, height = 8, width = 8)
+ggsave("figures/final_fates_scenarios/WAWA_ICH_winterspill_homing_plot_temps.png", WAWA_ICH_winterspill_homing_plot, height = 8, width = 8)
