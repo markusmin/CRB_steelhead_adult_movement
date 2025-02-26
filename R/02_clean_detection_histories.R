@@ -221,3 +221,57 @@ complete_det_hist %>%
 # Export this file
 
 write.csv(complete_det_hist_postprocessed, here::here("intermediate_outputs", "complete_det_hist_postprocessed.csv"))
+
+# Export a record of how many fish were detected at each site
+
+complete_det_hist_postprocessed %>% 
+  # Make a correction for JDA - shouldn't be necessary later once the script is re-run
+  mutate(event_site_name = ifelse(event_site_name %in% c("JO1 - John Day South Fish Ladder", "JO2 - John Day North Fish Ladder"),
+                                  "John Day Dam Adult Fishways (combined)", event_site_name)) %>% 
+  # mutate(event_site_latitude = ifelse(event_site_name == "John Day Dam Adult Fishways (combined)", 45.71866, event_site_latitude)) %>% 
+  # mutate(event_site_longitude = ifelse(event_site_name == "John Day Dam Adult Fishways (combined)", -120.6978, event_site_longitude)) %>% 
+  group_by(event_site_name) %>% 
+  summarise(n()) %>% 
+  dplyr::rename(count = `n()`)-> event_det_counts
+
+event_det_counts %>% 
+  left_join(., event_site_metadata, by = "event_site_name") -> event_det_counts
+
+# Get another df for dams
+# Note: this is outdated, but also not important to the output
+event_det_counts %>% 
+  mutate(dam = ifelse(event_site_name %in% c("Bonneville Adult Fishways (combined)",
+                                             "McNary Adult Fishways (combined)",
+                                             "Priest Rapids Adult Fishways (combined)",
+                                             "Rock Island Adult Fishways (combined)", 
+                                             "RRF - Rocky Reach Fishway", 
+                                             "Wells Dam Adult Fishways (combined)",
+                                             "Ice Harbor Adult Fishways (combined)",  
+                                             "Lower Granite Dam Adult Fishways (combined)",
+                                             "John Day Dam Adult Fishways (combined)",
+                                             # Dams without consistent PIT tag detectors
+                                             # Missing John Day for this dataset (installed 2017)
+                                             "The Dalles Adult Fishways (combined)",
+                                             "LMA - Lower Monumental Adult Ladders",
+                                             "GOA - Little Goose Fish Ladder"), "dam",
+                      "in stream")) %>% 
+  # Get a field for dam abbreviations
+  mutate(dam_abbr = ifelse(event_site_name == "Bonneville Adult Fishways (combined)", "BON",
+                           ifelse(event_site_name == "McNary Adult Fishways (combined)", "MCN",
+                                  ifelse(event_site_name == "Priest Rapids Adult Fishways (combined)", "PRA",
+                                         ifelse(event_site_name == "Rock Island Adult Fishways (combined)", "RIS",
+                                                ifelse(event_site_name == "RRF - Rocky Reach Fishway", "RRE",
+                                                       ifelse(event_site_name == "Wells Dam Adult Fishways (combined)", "WEL",
+                                                              ifelse(event_site_name == "Ice Harbor Adult Fishways (combined)", "ICH",
+                                                                     ifelse(event_site_name == "Lower Granite Dam Adult Fishways (combined)", "LGR",
+                                                                            # Dams without consistent PIT tag detectors
+                                                                            ifelse(event_site_name == "John Day Dam Adult Fishways (combined)", "JDA",
+                                                                                   ifelse(event_site_name == "The Dalles Adult Fishways (combined)", "TDA",
+                                                                                          ifelse(event_site_name == "LMA - Lower Monumental Adult Ladders", "LMO",
+                                                                                                 ifelse(event_site_name == "GOA - Little Goose Fish Ladder", "LGO", NA))))))))))))) -> event_det_counts
+
+# the old version somehow has lat/lons for the sites and this doesn't, so let's
+# leave the old one in
+# write.csv(event_det_counts,  "intermediate_outputs/complete_event_det_counts.csv", row.names = FALSE)
+
+
