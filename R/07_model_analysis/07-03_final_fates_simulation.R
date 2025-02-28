@@ -4,8 +4,12 @@
 # generates estimates of final fate distributions
 
 # First, need to load in all of the model runs and all of the packages.
-source("R/07_model_analysis/07-01_load_stan_models.R")
+# source("R/07_model_analysis/07-01_load_stan_models.R")
 
+# If we are running this on hyak, we need to change the source path
+source("07-01_load_stan_models.R")
+# then, we need to set our working directory so that the remaining file paths will work
+setwd("/gscratch/scrubbed/mmin/")
 
 #### Final fates functions ####
 
@@ -3589,22 +3593,26 @@ ff_nsim <- 1000
 # wen_ff_comp_jitter_plot <- plot_final_fate_rear_type(wen_ff_comp, natal_origin = "Wenatchee River")
 # ggsave(here::here("figures", "final_fates", "wen_ff_comp_jitter_plot.png"), wen_ff_comp_jitter_plot, height = 8, width = 8)
 wen_ff_comp_median <- compare_final_fate_rear_type_UC(niter = ff_iter, nsim = ff_nsim, origin_select = "Wenatchee River", condition_jitter = FALSE)
+save(wen_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "WEN_comp_data.rda"))
 wen_ff_comp_median_plot <- plot_final_fate_rear_type(wen_ff_comp_median, natal_origin = "Wenatchee River")
 ggsave(here::here("figures", "final_fates", "wen_ff_comp_median_plot.png"), wen_ff_comp_median_plot, height = 8, width = 8)
 
 # Entiat comparison
 ent_ff_comp_median <- compare_final_fate_rear_type_UC(niter = ff_iter, nsim = ff_nsim, origin_select = "Entiat River", condition_jitter = FALSE)
+save(ent_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "ENT_comp_data.rda"))
 ent_ff_comp_median_plot <- plot_final_fate_rear_type(ent_ff_comp_median, natal_origin = "Entiat River")
 ggsave(here::here("figures", "final_fates", "ent_ff_comp_median_plot.png"), ent_ff_comp_median_plot, height = 8, width = 8)
 
 # Okanogan comparison
 oka_ff_comp_median <- compare_final_fate_rear_type_UC(niter = ff_iter, nsim = ff_nsim, origin_select = "Okanogan River", condition_jitter = FALSE)
+save(oka_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "OKA_comp_data.rda"))
 oka_ff_comp_median_plot <- plot_final_fate_rear_type(oka_ff_comp_median, natal_origin = "Okanogan River")
 ggsave(here::here("figures", "final_fates", "oka_ff_comp_median_plot.png"), oka_ff_comp_median_plot, height = 8, width = 8)
 
 # Methow comparison
 # this used to crash with jitter - let's see if it works now
 met_ff_comp_median <- compare_final_fate_rear_type_UC(niter = ff_iter, nsim = ff_nsim, origin_select = "Methow River", condition_jitter = FALSE)
+save(met_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "MET_comp_data.rda"))
 met_ff_comp_median_plot <- plot_final_fate_rear_type(met_ff_comp_median, natal_origin = "Methow River")
 ggsave(here::here("figures", "final_fates", "met_ff_comp_median_plot.png"), met_ff_comp_median_plot, height = 8, width = 8)
 
@@ -3613,31 +3621,37 @@ ggsave(here::here("figures", "final_fates", "met_ff_comp_median_plot.png"), met_
 # Middle Columbia
 # Deschutes comparison
 des_ff_comp_median <- compare_final_fate_rear_type_MC(niter = ff_iter, nsim = ff_nsim, origin_select = "Deschutes River", condition_jitter = FALSE)
+save(des_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "DES_comp_data.rda"))
 des_ff_comp_median_plot <- plot_final_fate_rear_type(des_ff_comp_median, natal_origin = "Deschutes River")
 ggsave(here::here("figures", "final_fates", "des_ff_comp_median_plot.png"), des_ff_comp_median_plot, height = 8, width = 8)
 
 # John Day comparison
 jdr_ff_comp_median <- compare_final_fate_rear_type_MC(niter = ff_iter, nsim = ff_nsim, origin_select = "John Day River", condition_jitter = FALSE)
+save(jdr_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "JDR_comp_data.rda"))
 jdr_ff_comp_median_plot <- plot_final_fate_rear_type(jdr_ff_comp_median, natal_origin = "John Day River")
 ggsave(here::here("figures", "final_fates", "jdr_ff_comp_median_plot.png"), jdr_ff_comp_median_plot, height = 8, width = 8)
 
 # Fifteenmile Creek comparison
 fif_ff_comp_median <- compare_final_fate_rear_type_MC(niter = ff_iter, nsim = ff_nsim, origin_select = "Fifteenmile Creek", condition_jitter = FALSE)
+save(fif_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "FIF_comp_data.rda"))
 fif_ff_comp_median_plot <- plot_final_fate_rear_type(fif_ff_comp_median, natal_origin = "Fifteenmile Creek")
 ggsave(here::here("figures", "final_fates", "fif_ff_comp_median_plot.png"), fif_ff_comp_median_plot, height = 8, width = 8)
 
 # Umatilla comparison
 uma_ff_comp_median <- compare_final_fate_rear_type_MC(niter = ff_iter, nsim = ff_nsim, origin_select = "Umatilla River", condition_jitter = FALSE)
+save(uma_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "UMA_comp_data.rda"))
 uma_ff_comp_median_plot <- plot_final_fate_rear_type(uma_ff_comp_median, natal_origin = "Umatilla River")
 ggsave(here::here("figures", "final_fates", "uma_ff_comp_median_plot.png"), uma_ff_comp_median_plot, height = 8, width = 8)
 
 # Yakima comparison
 yak_ff_comp_median <- compare_final_fate_rear_type_MC(niter = ff_iter, nsim = ff_nsim, origin_select = "Yakima River", condition_jitter = FALSE)
+save(yak_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "YAK_comp_data.rda"))
 yak_ff_comp_median_plot <- plot_final_fate_rear_type(yak_ff_comp_median, natal_origin = "Yakima River")
 ggsave(here::here("figures", "final_fates", "yak_ff_comp_median_plot.png"), yak_ff_comp_median_plot, height = 8, width = 8)
 
 # Walla Walla comparison
 wawa_ff_comp_median <- compare_final_fate_rear_type_MC(niter = ff_iter, nsim = ff_nsim, origin_select = "Walla Walla River", condition_jitter = FALSE)
+save(wawa_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "WAWA_comp_data.rda"))
 wawa_ff_comp_median_plot <- plot_final_fate_rear_type(wawa_ff_comp_median, natal_origin = "Walla Walla River")
 ggsave(here::here("figures", "final_fates", "wawa_ff_comp_median_plot.png"), wawa_ff_comp_median_plot, height = 8, width = 8)
 
@@ -3645,31 +3659,37 @@ ggsave(here::here("figures", "final_fates", "wawa_ff_comp_median_plot.png"), waw
 ## Snake River
 # Asotin Creek comparison
 aso_ff_comp_median <- compare_final_fate_rear_type_SR(niter = ff_iter, nsim = ff_nsim, origin_select = "Asotin Creek", condition_jitter = FALSE)
+save(aso_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "ASO_comp_data.rda"))
 aso_ff_comp_median_plot <- plot_final_fate_rear_type(aso_ff_comp_median, natal_origin = "Asotin Creek")
 ggsave(here::here("figures", "final_fates", "aso_ff_comp_median_plot.png"), aso_ff_comp_median_plot, height = 8, width = 8)
 
 # Clearwater comparison
 cle_ff_comp_median <- compare_final_fate_rear_type_SR(niter = ff_iter, nsim = ff_nsim, origin_select = "Clearwater River", condition_jitter = FALSE)
+save(cle_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "CLE_comp_data.rda"))
 cle_ff_comp_median_plot <- plot_final_fate_rear_type(cle_ff_comp_median, natal_origin = "Clearwater River")
 ggsave(here::here("figures", "final_fates", "cle_ff_comp_median_plot.png"), cle_ff_comp_median_plot, height = 8, width = 8)
 
 # Salmon comparison
 sal_ff_comp_median <- compare_final_fate_rear_type_SR(niter = ff_iter, nsim = ff_nsim, origin_select = "Salmon River", condition_jitter = FALSE)
+save(sal_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "SAL_comp_data.rda"))
 sal_ff_comp_median_plot <- plot_final_fate_rear_type(sal_ff_comp_median, natal_origin = "Salmon River")
 ggsave(here::here("figures", "final_fates", "sal_ff_comp_median_plot.png"), sal_ff_comp_median_plot, height = 8, width = 8)
 
 # Grande Ronde comparison
 gr_ff_comp_median <- compare_final_fate_rear_type_SR(niter = ff_iter, nsim = ff_nsim, origin_select = "Grande Ronde River", condition_jitter = FALSE)
+save(gr_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "GR_comp_data.rda"))
 gr_ff_comp_median_plot <- plot_final_fate_rear_type(gr_ff_comp_median, natal_origin = "Grande Ronde River")
 ggsave(here::here("figures", "final_fates", "gr_ff_comp_median_plot.png"), gr_ff_comp_median_plot, height = 8, width = 8)
 
 # Imnaha comparison
 imn_ff_comp_median <- compare_final_fate_rear_type_SR(niter = ff_iter, nsim = ff_nsim, origin_select = "Imnaha River", condition_jitter = FALSE)
+save(imn_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "IMN_comp_data.rda"))
 imn_ff_comp_median_plot <- plot_final_fate_rear_type(imn_ff_comp_median, natal_origin = "Imnaha River")
 ggsave(here::here("figures", "final_fates", "imn_ff_comp_median_plot.png"), imn_ff_comp_median_plot, height = 8, width = 8)
 
 # Tucannon comparison
 tuc_ff_comp_median <- compare_final_fate_rear_type_SR(niter = ff_iter, nsim = ff_nsim, origin_select = "Tucannon River", condition_jitter = FALSE)
+save(TUC_ff_comp_median, file = here::here("figures", "final_fates", "simulation_runs", "TUC_comp_data.rda"))
 tuc_ff_comp_median_plot <- plot_final_fate_rear_type(tuc_ff_comp_median, natal_origin = "Tucannon River")
 ggsave(here::here("figures", "final_fates", "tuc_ff_comp_median_plot.png"), tuc_ff_comp_median_plot, height = 8, width = 8)
 
@@ -3693,7 +3713,7 @@ FF_comp_data <- list(wen_ff_comp_median = wen_ff_comp_median,
                      imn_ff_comp_median = imn_ff_comp_median,
                      tuc_ff_comp_median = tuc_ff_comp_median)
 
-save(FF_comp_data, file = here::here("figures", "final_fates", "FF_comp_data.rda"))
+save(FF_comp_data, file = here::here("figures", "final_fates", "simulation_runs", "FF_comp_data.rda"))
 
 
 

@@ -6,6 +6,9 @@
 # First, need to load in all of the model runs and all of the packages.
 source("R/07_model_analysis/07-01_load_stan_models.R")
 
+# Load the temperature summary
+window_temp_summary <- read.csv(here::here("Data", "covariate_data", "model_inputs", "window_temps_summary.csv"), row.names = 1)
+
 #### Function that extracts the DE parameters
 extract_DE_parameters <- function(fit, fit_summary){
   # extract b0 as an array
@@ -1175,7 +1178,7 @@ plot_compare_rear_temp_effect_multiple_movements <- function(origin_select,
     temp_plot_legend_gg <- as_ggplot(temp_legend)
     
     # for testing
-    # ggsave(here::here("stan_actual", "output", "paper_figures", "01_legend_test.png"), temp_plot_legend_gg, height = 4, width = 4)
+    # ggsave(here::here("figures", "paper_figures", "01_legend_test.png"), temp_plot_legend_gg, height = 4, width = 4)
     
   } else {
     # suppress common legend - for combined plot
@@ -1239,7 +1242,7 @@ plot_compare_rear_temp_effect_multiple_movements <- function(origin_select,
                                heights = c(2,6))
     
     # for testing
-    # ggsave(here::here("stan_actual", "output", "paper_figures", "01_test.png"), combined_plot, height = 6, width = 6)
+    # ggsave(here::here("figures", "paper_figures", "01_test.png"), combined_plot, height = 6, width = 6)
     
     
   }
@@ -1336,7 +1339,7 @@ JDR_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    
                                                                                    movements_evaluated = JDR_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "JDR_wild_compare_movement_temp.png"), JDR_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "JDR_wild_compare_movement_temp.png"), JDR_wild_compare_movement_temp, height = 8, width = 8)
 
 ### Umatilla River ###
 
@@ -1346,7 +1349,7 @@ UMA_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    wild_covariate_experiences = UMA_wild_covariate_experiences,
                                                                                    movements_evaluated = UMA_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "UMA_wild_compare_movement_temp.png"), UMA_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "UMA_wild_compare_movement_temp.png"), UMA_wild_compare_movement_temp, height = 8, width = 8)
 
 # UMA hatchery plot
 UMA_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movements(origin_select = "Umatilla River",
@@ -1354,7 +1357,7 @@ UMA_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_mov
                                                                                        hatchery_covariate_experiences = UMA_hatchery_covariate_experiences,
                                                                                        movements_evaluated = UMA_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "UMA_hatchery_compare_movement_temp.png"), UMA_hatchery_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "UMA_hatchery_compare_movement_temp.png"), UMA_hatchery_compare_movement_temp, height = 8, width = 8)
 
 ### Yakima River ###
 
@@ -1365,7 +1368,7 @@ YAK_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    
                                                                                    movements_evaluated = YAK_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "YAK_wild_compare_movement_temp.png"), YAK_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "YAK_wild_compare_movement_temp.png"), YAK_wild_compare_movement_temp, height = 8, width = 8)
 
 
 
@@ -1377,7 +1380,7 @@ WAWA_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_moveme
                                                                                     wild_covariate_experiences = WAWA_wild_covariate_experiences,
                                                                                     movements_evaluated = WAWA_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "WAWA_wild_compare_movement_temp.png"), WAWA_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "WAWA_wild_compare_movement_temp.png"), WAWA_wild_compare_movement_temp, height = 8, width = 8)
 
 # WAWA hatchery plot
 WAWA_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movements(origin_select = "Walla Walla River",
@@ -1385,7 +1388,7 @@ WAWA_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_mo
                                                                                         hatchery_covariate_experiences = WAWA_hatchery_covariate_experiences,
                                                                                         movements_evaluated = WAWA_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "WAWA_hatchery_compare_movement_temp.png"), WAWA_hatchery_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "WAWA_hatchery_compare_movement_temp.png"), WAWA_hatchery_compare_movement_temp, height = 8, width = 8)
 
 ### Wenatchee River ###
 
@@ -1395,7 +1398,7 @@ WEN_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    wild_covariate_experiences = WEN_wild_covariate_experiences,
                                                                                    movements_evaluated = WEN_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "WEN_wild_compare_movement_temp.png"), WEN_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "WEN_wild_compare_movement_temp.png"), WEN_wild_compare_movement_temp, height = 8, width = 8)
 
 # WEN hatchery plot
 WEN_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movements(origin_select = "Wenatchee River",
@@ -1403,7 +1406,7 @@ WEN_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_mov
                                                                                        hatchery_covariate_experiences = WEN_hatchery_covariate_experiences,
                                                                                        movements_evaluated = WEN_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "WEN_hatchery_compare_movement_temp.png"), WEN_hatchery_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "WEN_hatchery_compare_movement_temp.png"), WEN_hatchery_compare_movement_temp, height = 8, width = 8)
 
 ### Entiat River ###
 
@@ -1413,7 +1416,7 @@ ENT_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    wild_covariate_experiences = ENT_wild_covariate_experiences,
                                                                                    movements_evaluated = ENT_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "ENT_wild_compare_movement_temp.png"), ENT_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "ENT_wild_compare_movement_temp.png"), ENT_wild_compare_movement_temp, height = 8, width = 8)
 
 
 ### Tucannon River ###
@@ -1424,7 +1427,7 @@ TUC_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    wild_covariate_experiences = TUC_wild_covariate_experiences,
                                                                                    movements_evaluated = TUC_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "TUC_wild_compare_movement_temp.png"), TUC_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "TUC_wild_compare_movement_temp.png"), TUC_wild_compare_movement_temp, height = 8, width = 8)
 
 # TUC hatchery plot
 TUC_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movements(origin_select = "Tucannon River",
@@ -1432,7 +1435,7 @@ TUC_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_mov
                                                                                        hatchery_covariate_experiences = TUC_hatchery_covariate_experiences,
                                                                                        movements_evaluated = TUC_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "TUC_hatchery_compare_movement_temp.png"), TUC_hatchery_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "TUC_hatchery_compare_movement_temp.png"), TUC_hatchery_compare_movement_temp, height = 8, width = 8)
 
 ### Imnaha River ###
 
@@ -1442,7 +1445,7 @@ IMN_wild_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movemen
                                                                                    wild_covariate_experiences = IMN_wild_covariate_experiences,
                                                                                    movements_evaluated = IMN_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "IMN_wild_compare_movement_temp.png"), IMN_wild_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "IMN_wild_compare_movement_temp.png"), IMN_wild_compare_movement_temp, height = 8, width = 8)
 
 # IMN hatchery plot
 IMN_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_movements(origin_select = "Imnaha River",
@@ -1450,7 +1453,7 @@ IMN_hatchery_compare_movement_temp <- plot_compare_rear_temp_effect_multiple_mov
                                                                                        hatchery_covariate_experiences = IMN_hatchery_covariate_experiences,
                                                                                        movements_evaluated = IMN_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "temperature", "IMN_hatchery_compare_movement_temp.png"), IMN_hatchery_compare_movement_temp, height = 8, width = 8)
+ggsave(here::here("figures", "temperature_effects", "IMN_hatchery_compare_movement_temp.png"), IMN_hatchery_compare_movement_temp, height = 8, width = 8)
 
 
 # Create the legend figure by itself
@@ -1465,7 +1468,7 @@ temp_legend <- ggpubr::get_legend(temp_plot_for_legend)
 temp_plot_legend_gg <- as_ggplot(temp_legend) + theme(panel.background = element_rect(fill = "white", color = "white"))
 
 
-#### Generate the figure for the paper, using the figures above ####
+#### Generate Figure 4 using the figures above ####
 
 combined_movement_temp_plot <- ggarrange(JDR_wild_compare_movement_temp, UMA_wild_compare_movement_temp, UMA_hatchery_compare_movement_temp,
                                          YAK_wild_compare_movement_temp, WAWA_wild_compare_movement_temp, WAWA_hatchery_compare_movement_temp,
@@ -1493,5 +1496,211 @@ combined_movement_temp_plot <- cowplot::ggdraw(annotate_figure(combined_movement
   theme(plot.background = element_rect(fill="white", color = NA))
 
 
-ggsave(here::here("stan_actual", "output", "paper_figures", "combined_movement_temp_plot_v2.png"), combined_movement_temp_plot, height = 12, width = 16)
+ggsave(here::here("figures", "paper_figures", "Fig4_temperature_home_mainstem.png"), combined_movement_temp_plot, height = 12, width = 16)
+
+#### Figure 5: Deschutes river use vs. temperature ####
+
+### Step 1: Evaluate probability of movement into Deschutes for different origins ###
+
+# establish df for movements into Deschutes only
+des_movement <- data.frame(from = c(2), to = c(10),
+                            Movement = c("Deschutes River"))
+
+# estimate probability of movements into Deschutes across all origins
+
+# Middle Columbia, Wild
+JDR_wild_temp_DES_move_prob_array <- estimate_temp_effect_MCW(origin_select = "John Day River", movements = des_movement)
+UMA_wild_temp_DES_move_prob_array <- estimate_temp_effect_MCW(origin_select = "Umatilla River", movements = des_movement)
+YAK_wild_temp_DES_move_prob_array <- estimate_temp_effect_MCW(origin_select = "Yakima River", movements = des_movement)
+WAWA_wild_temp_DES_move_prob_array <- estimate_temp_effect_MCW(origin_select = "Walla Walla River", movements = des_movement)
+FIF_wild_temp_DES_move_prob_array <- estimate_temp_effect_MCW(origin_select = "Fifteenmile Creek", movements = des_movement)
+DES_wild_temp_DES_move_prob_array <- estimate_temp_effect_MCW(origin_select = "Deschutes River", movements = des_movement)
+
+# Middle Columbia, Hatchery
+UMA_hatchery_temp_DES_move_prob_array <- estimate_temp_effect_MCH(origin_select = "Umatilla River", movements = des_movement)
+WAWA_hatchery_temp_DES_move_prob_array <- estimate_temp_effect_MCH(origin_select = "Walla Walla River", movements = des_movement)
+
+# Upper Columbia, wild
+# Note that since this movement is outside the DPS boundaries, it'll be shared across all origins
+# so we can just choose one and it'll be the same for all
+UC_wild_temp_DES_move_prob_array <- estimate_temp_effect_UCW(origin_select = "Wenatchee River", movements = des_movement)
+
+# Upper Columbia, hatchery
+# Note that since this movement is outside the DPS boundaries, it'll be shared across all origins
+# so we can just choose one and it'll be the same for all
+UC_hatchery_temp_DES_move_prob_array <- estimate_temp_effect_UCH(origin_select = "Wenatchee River", movements = des_movement)
+
+# Snake River, wild
+# Note that since this movement is outside the DPS boundaries, it'll be shared across all origins
+# so we can just choose one and it'll be the same for all
+SR_wild_temp_DES_move_prob_array <- estimate_temp_effect_SRW(origin_select = "Tucannon River", movements = des_movement)
+
+# Snake River, hatchery
+# Note that since this movement is outside the DPS boundaries, it'll be shared across all origins
+# so we can just choose one and it'll be the same for all
+SR_hatchery_temp_DES_move_prob_array <- estimate_temp_effect_SRH(origin_select = "Tucannon River", movements = des_movement)
+
+
+### Step 2: Reformat predicted movement probabilities for plot ###
+# little function to reformat movement prob arrays
+reformat_DES_prob_array <- function(move_prob_array, origin_name, rear_type){
+  movement_df <- as.data.frame(move_prob_array[,,1])
+  colnames(movement_df) <- 1:ncol(movement_df)
+  temp_predict <- seq(-2,2,length = 100)
+  movement_df$temp <- temp_predict
+  
+  movement_df %>% 
+    pivot_longer(!temp, names_to = "iter", values_to = "prob") %>% 
+    mutate(origin = origin_name,
+           rear = rear_type) -> movement_df
+  
+  dam_index <- data.frame(dam = c("BON", "MCN", "PRA", "RIS", "RRE", "WEL", "ICH", "LGR"),
+                          state = seq(2,9))
+  
+  movement_df %>% 
+    mutate(temp_actual = window_temp_summary[, paste0(subset(dam_index, state == 2)$dam, "_mean")] + 
+           window_temp_summary[, paste0(subset(dam_index, state == 2)$dam, "_sd")]*temp) -> movement_df
+  
+  return(movement_df)
+}
+
+# reformat data for each origin
+# Middle Columbia, Wild
+JDR_natural_DES_move_long <- reformat_DES_prob_array(JDR_wild_temp_DES_move_prob_array, origin_name = "John Day River", rear_type = "natural")
+UMA_natural_DES_move_long <- reformat_DES_prob_array(UMA_wild_temp_DES_move_prob_array, origin_name = "Umatilla River", rear_type = "natural")
+YAK_natural_DES_move_long <- reformat_DES_prob_array(YAK_wild_temp_DES_move_prob_array, origin_name = "Yakima River", rear_type = "natural")
+WAWA_natural_DES_move_long <- reformat_DES_prob_array(WAWA_wild_temp_DES_move_prob_array, origin_name = "Walla Walla River", rear_type = "natural")
+FIF_natural_DES_move_long <- reformat_DES_prob_array(FIF_wild_temp_DES_move_prob_array, origin_name = "Fifteenmile Creek", rear_type = "natural")
+DES_natural_DES_move_long <- reformat_DES_prob_array(DES_wild_temp_DES_move_prob_array, origin_name = "Deschutes River", rear_type = "natural")
+
+# Middle Columbia, Hatchery
+UMA_hatchery_DES_move_long <- reformat_DES_prob_array(UMA_hatchery_temp_DES_move_prob_array, origin_name = "Umatilla River", rear_type = "hatchery")
+WAWA_hatchery_DES_move_long <- reformat_DES_prob_array(WAWA_hatchery_temp_DES_move_prob_array, origin_name = "Walla Walla River", rear_type = "hatchery")
+
+# Upper Columbia, Wild
+UC_wild_DES_move_long <- reformat_DES_prob_array(UC_wild_temp_DES_move_prob_array, origin_name = "Upper Columbia", rear_type = "natural")
+
+# Upper Columbia, Hatchery
+UC_hatchery_DES_move_long <- reformat_DES_prob_array(UC_hatchery_temp_DES_move_prob_array, origin_name = "Upper Columbia", rear_type = "hatchery")
+
+# Snake River, Wild
+SR_wild_DES_move_long <- reformat_DES_prob_array(SR_wild_temp_DES_move_prob_array, origin_name = "Snake River", rear_type = "natural")
+
+# Snake River, Hatchery
+SR_hatchery_DES_move_long <- reformat_DES_prob_array(SR_hatchery_temp_DES_move_prob_array, origin_name = "Snake River", rear_type = "hatchery")
+
+JDR_natural_DES_move_long %>% 
+  bind_rows(., UMA_natural_DES_move_long, YAK_natural_DES_move_long, WAWA_natural_DES_move_long, 
+            FIF_natural_DES_move_long, DES_natural_DES_move_long,
+            UMA_hatchery_DES_move_long, WAWA_hatchery_DES_move_long,
+            UC_wild_DES_move_long, UC_hatchery_DES_move_long,
+            SR_wild_DES_move_long, SR_hatchery_DES_move_long,) -> combined_DES_move_long
+
+# summarise into median and 95% CI
+combined_DES_move_long %>% 
+  group_by(temp_actual, origin, rear) %>% 
+  summarise(prob = quantile(prob, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975)) %>% 
+  pivot_wider(names_from = q, values_from = prob) %>% 
+  mutate(origin_rear = paste0(origin, ", ", rear)) -> combined_DES_move_summary
+
+# Drop Fifteenmile Creek and Deschutes
+# Deschutes is the home tributary so it's not what we're interested in; Fifteenmile
+# Creek is before Deschutes to it's of a different nature than the other tributaries
+combined_DES_move_summary %>% 
+  filter(!(origin %in% c("Fifteenmile Creek", "Deschutes River"))) -> combined_DES_move_summary
+
+# Reorder these for plotting
+combined_DES_move_summary$origin_rear <- factor(combined_DES_move_summary$origin_rear, levels = 
+                                                  c("John Day River, natural",
+                                                    "Umatilla River, hatchery",    
+                                                    "Umatilla River, natural",
+                                                    "Walla Walla River, hatchery",
+                                                    "Walla Walla River, natural",  
+                                                    "Yakima River, natural",
+                                                    "Upper Columbia, hatchery",    
+                                                    "Upper Columbia, natural",
+                                                    "Snake River, hatchery",       
+                                                    "Snake River, natural"      
+                                                    ))
+
+combined_DES_move_summary$origin <- factor(combined_DES_move_summary$origin, levels = 
+                                                  c("John Day River",
+                                                    "Umatilla River",    
+                                                    "Walla Walla River",  
+                                                    "Yakima River",
+                                                    "Upper Columbia",
+                                                    "Snake River"
+                                                  ))
+
+
+### Step 3: Generate and export the plot ###
+
+DES_temp_move_prob_plot <- ggplot(combined_DES_move_summary, aes(x = temp_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
+                                                                      color = origin_rear, fill = origin_rear)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.2, color = NA) +
+  scale_y_continuous(lim = c(0,1)) +
+  # common x-axis scale across all populations
+  coord_cartesian(xlim = c(4, 22.5), expand = FALSE) +
+  # scale_x_continuous(lim = c(floor(min(covariate_experiences$temp_actual)),ceiling(max(covariate_experiences$temp_actual))), expand = c(0,0)) +
+  # scale_color_manual(values = movement_colors) +
+  # scale_fill_manual(values =  movement_colors) +
+  xlab(expression(~"Temperature" ~ ("°C"))) +
+  ylab("Movement probability") +
+  theme(panel.grid.major = element_line(color = "gray90"),
+        panel.background = element_rect(fill = "white", color = "black"),
+        panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+        # turn off the axis titles on each individual plot and just show one for whole plot
+        axis.title = element_blank(),
+        # these plot margins are to leave space for the population name on the big figure
+        plot.margin = unit(c(0, 0.2, 0.2, 0.2),"cm"))
+
+
+ggsave(here::here("figures", "paper_figures", "Fig5_deschutes_temp_movements.png"), DES_temp_move_prob_plot, height = 8, width = 10)
+
+# Version 2 - without the credible intervals, to make it easier to interpret
+# Set MC to one
+# Set SR and UC to a different one
+origin_rear_linetypes <- c("John Day River, natural" = 1,  
+                           "Snake River, hatchery" = 2,       
+                           "Snake River, natural" = 2,        
+                           "Umatilla River, hatchery" = 1,    
+                           "Umatilla River, natural" = 1,
+                           "Upper Columbia, hatchery" = 2,    
+                           "Upper Columbia, natural" = 2,     
+                           "Walla Walla River, hatchery" = 1,
+                           "Walla Walla River, natural" = 1,  
+                           "Yakima River, natural" = 1)
+
+
+DES_temp_move_prob_plot <- ggplot(combined_DES_move_summary, aes(x = temp_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
+                                                                 color = origin, fill = origin, linetype = rear)) +
+  geom_line() +
+  # geom_ribbon(alpha = 0.2, color = NA) +
+  scale_y_continuous(lim = c(0,0.55)) +
+  scale_linetype_manual(values = c("natural" = 1, "hatchery" = 2), name = "Rearing Type") +
+  # common x-axis scale across all populations
+  coord_cartesian(xlim = c(4, 22.5), expand = FALSE) +
+  # scale_x_continuous(lim = c(floor(min(covariate_experiences$temp_actual)),ceiling(max(covariate_experiences$temp_actual))), expand = c(0,0)) +
+  # scale_color_manual(values = movement_colors) +
+  scale_color_tableau(palette = "Tableau 10", name = "Natal Origin") +
+  # scale_fill_manual(values =  movement_colors) +
+  xlab(expression(~"Temperature" ~ ("°C"))) +
+  ylab("Movement probability") +
+  theme(panel.grid.major = element_blank(), #element_line(color = "gray90"),
+        panel.background = element_rect(fill = "white", color = "black"),
+        legend.key = element_blank(),
+        panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+        legend.position = c(0.15, 0.75),
+        legend.key.height = unit(0.55, "cm"),
+        legend.key.width = unit(0.55, "cm"),
+        legend.title = element_text(size = 16),
+        legend.text = element_text(size = 10),
+        # turn off the axis titles on each individual plot and just show one for whole plot
+        # axis.title = element_blank(),
+        # these plot margins are to leave space for the population name on the big figure
+        plot.margin = unit(c(0, 0.2, 0.2, 0.2),"cm"))
+
+
+ggsave(here::here("figures", "paper_figures", "Fig5_deschutes_temp_movements.png"), DES_temp_move_prob_plot, height = 8, width = 10)
 

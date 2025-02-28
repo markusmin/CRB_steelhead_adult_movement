@@ -14,7 +14,42 @@ source("R/07_model_analysis/07-01_load_stan_models.R")
 
 # 08-model-final-fates.R also needs to be run first, because this will compute
 # the final fates based on median conditions across all runs.
-load(here::here("figures", "final_fates", "FF_comp_data.rda"))
+# load(here::here("figures", "final_fates", "simulation_runs", "FF_comp_data.rda"))
+
+# Can also load individual files
+load(here::here("figures", "final_fates", "simulation_runs", "DES_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "ENT_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "FIF_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "JDR_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "MET_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "OKA_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "UMA_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "WAWA_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "WEN_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "YAK_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "ASO_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "CLE_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "SAL_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "GR_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "IMN_comp_data.rda"))
+load(here::here("figures", "final_fates", "simulation_runs", "TUC_comp_data.rda"))
+
+FF_comp_data$wen_ff_comp_median <- wen_ff_comp_median
+FF_comp_data$ent_ff_comp_median <- ent_ff_comp_median
+FF_comp_data$oka_ff_comp_median <- oka_ff_comp_median
+FF_comp_data$met_ff_comp_median <- met_ff_comp_median
+FF_comp_data$des_ff_comp_median <- des_ff_comp_median
+FF_comp_data$jdr_ff_comp_median <- jdr_ff_comp_median
+FF_comp_data$fif_ff_comp_median <- fif_ff_comp_median
+FF_comp_data$uma_ff_comp_median <- uma_ff_comp_median
+FF_comp_data$yak_ff_comp_median <- yak_ff_comp_median
+FF_comp_data$wawa_ff_comp_median <- wawa_ff_comp_median
+FF_comp_data$aso_ff_comp_median <- aso_ff_comp_median
+FF_comp_data$cle_ff_comp_median <- cle_ff_comp_median
+FF_comp_data$sal_ff_comp_median <- sal_ff_comp_median
+FF_comp_data$gr_ff_comp_median <- gr_ff_comp_median
+FF_comp_data$imn_ff_comp_median <- imn_ff_comp_median
+FF_comp_data$tuc_ff_comp_median <- tuc_ff_comp_median
 
 
 #### few helpful functions from other scripts ####
@@ -159,24 +194,6 @@ get_states_dates_direction <- function(envir){
   
   return(transitions_df)
 }
-
-# create a list that maps origin numbers (params) to what they actually are
-natal_origins <- gsub(" Mouth| Upstream", "", model_states)
-natal_origins <- natal_origins[!(duplicated(natal_origins))]
-natal_origins <- natal_origins[!(grepl("mainstem", natal_origins))]
-natal_origins <- natal_origins[!(grepl("other tributaries", natal_origins))]
-natal_origins <- natal_origins[!(natal_origins == "loss")]
-
-# Use the parameter map to index the right effects
-origin_param_map <- data.frame(
-  natal_origin = natal_origins,
-  hatchery = c(NA, NA, NA, NA, 1, NA, 2, # MC
-               1,NA,2,3, # UC
-               5,NA,1,4,2,3), # SR,
-  wild = c(1,3,NA,2,4,6,5, # MC
-           1,2,NA,3, # UC
-           6,1,2,5,3,4)) # SR
-
 
 #### Functions to compute overshoot probabilities based on median conditions ####
 

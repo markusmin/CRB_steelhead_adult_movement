@@ -69,17 +69,17 @@ SRW_ess_tail_plot <- create_ess_tail_hist(fit_summary = SRW_fit_summary, populat
 SRH_ess_tail_plot <- create_ess_tail_hist(fit_summary = SRH_fit_summary, population = "SRH")
 
 # arrange them
-rhat_comb_plots <- ggarrange(plotlist = list(UCW_rhat_plot, UCH_rhat_plot, MCW_rhat_plot, MCH_rhat_plot, SRW_rhat_plot),
+rhat_comb_plots <- ggarrange(plotlist = list(UCW_rhat_plot, UCH_rhat_plot, MCW_rhat_plot, MCH_rhat_plot, SRW_rhat_plot, SRH_rhat_plot),
                              ncol = 3, nrow = 2)
 
 ggsave("figures/diagnostic_plots/rhat_comb_plots.png", rhat_comb_plots, height = 8, width = 10)
 
-ess_tail_comb_plots <- ggarrange(plotlist = list(UCW_ess_bulk_plot, UCH_ess_bulk_plot, MCW_ess_bulk_plot, MCH_ess_bulk_plot, SRW_ess_bulk_plot),
+ess_tail_comb_plots <- ggarrange(plotlist = list(UCW_ess_bulk_plot, UCH_ess_bulk_plot, MCW_ess_bulk_plot, MCH_ess_bulk_plot, SRW_ess_bulk_plot, SRH_ess_bulk_plot),
                                  ncol = 3, nrow = 2)
 
 ggsave("figures/diagnostic_plots/ess_tail_comb_plots.png", ess_tail_comb_plots, height = 8, width = 10)
 
-ess_bulk_comb_plots <- ggarrange(plotlist = list(UCW_ess_tail_plot, UCH_ess_tail_plot, MCW_ess_tail_plot, MCH_ess_tail_plot, SRW_ess_tail_plot),
+ess_bulk_comb_plots <- ggarrange(plotlist = list(fit = UCW_ess_tail_plot, UCH_ess_tail_plot, MCW_ess_tail_plot, MCH_ess_tail_plot, SRW_ess_tail_plot, SRH_ess_tail_plot),
                                  ncol = 3, nrow = 2)
 
 ggsave("figures/diagnostic_plots/ess_bulk_comb_plots.png", ess_bulk_comb_plots, height = 8, width = 10)

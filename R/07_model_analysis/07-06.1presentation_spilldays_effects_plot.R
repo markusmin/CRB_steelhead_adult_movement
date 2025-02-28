@@ -1,7 +1,7 @@
 # 07-06_Fig5_spilldays_effects_plot
 
 # This script takes the output from the stan model runs and
-# plots the effects of days of winter spill
+# plots the effects of temperature
 
 # First, need to load in all of the model runs and all of the packages.
 source("R/07_model_analysis/07-01_load_stan_models.R")
@@ -1101,19 +1101,19 @@ plot_compare_rear_spill_effect_multiple_movements <- function(origin_select,
     spill_plot_legend_gg <- as_ggplot(spill_legend)
     
     # for testing
-    # ggsave(here::here("stan_actual", "output", "paper_figures", "01_legend_test.png"), spill_plot_legend_gg, height = 4, width = 4)
+    # ggsave(here::here("figures", "presentation", "01_legend_test.png"), spill_plot_legend_gg, height = 4, width = 4)
     
   } else {
     # suppress common legend - for combined plot
     rear_spill_move_prob_plot <- ggplot(rear_spill_move_prob_quantiles, aes(x = spill_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
                                                                             color = Movement, fill = Movement)) +
-      geom_line() +
+      geom_line(linewidth = 3) +
       geom_ribbon(alpha = 0.2, color = NA) +
       # geom_rug(data = covariate_experiences, aes(x = spill_actual), inherit.aes = FALSE,
       #          sides = "t", length = unit(0.3, "cm"), outside = TRUE) +
       scale_y_continuous(lim = c(0,1), expand = c(0,0)) +
       # common x-axis scale across all populations
-      coord_cartesian(xlim = c(0, 80), expand = FALSE) +
+      coord_cartesian(xlim = c(0, 85), expand = FALSE) +
       # scale_x_continuous(lim = c(0,ceiling(max(covariate_experiences$spill_actual))), expand = c(0,0)) +
       scale_color_manual(values = movement_colors) +
       scale_fill_manual(values =  movement_colors) +
@@ -1125,6 +1125,7 @@ plot_compare_rear_spill_effect_multiple_movements <- function(origin_select,
             panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
             # turn off the axis titles on each individual plot and just show one for whole plot
             axis.title = element_blank(),
+            axis.text = element_text(size = 18),
             # these plot margins are to leave space for the population name on the big figure
             plot.margin = unit(c(0, 0.2, 0.2, 0.2),"cm"))
     
@@ -1166,7 +1167,7 @@ plot_compare_rear_spill_effect_multiple_movements <- function(origin_select,
                                heights = c(2,6))
     
     # for testing
-    # ggsave(here::here("stan_actual", "output", "paper_figures", "01_test.png"), combined_plot, height = 6, width = 6)
+    # ggsave(here::here("figures", "presentation", "01_test.png"), combined_plot, height = 6, width = 6)
     
     
   }
@@ -1214,37 +1215,6 @@ WAWA_hatchery_spill_move_prob_array <- estimate_spilldays_effect_MCH(origin_sele
 WAWA_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, rear = "wild", origin_select = "Walla Walla River")
 WAWA_hatchery_covariate_experiences <- extract_covariate_experiences(envir = MCH_envir, rear = "hatchery", origin_select = "Walla Walla River")
 
-### Wenatchee River ###
-WEN_spilldays_movements <- data.frame(from = c(6,6,6), to = c(5, 7, 41),
-                                      Movement = c("Fallback", "Overshoot - WEL", 
-                                                   "Loss"))
-WEN_wild_spill_move_prob_array <- estimate_spilldays_effect_UCW(origin_select = "Wenatchee River", movements = WEN_spilldays_movements)
-WEN_hatchery_spill_move_prob_array <- estimate_spilldays_effect_UCH(origin_select = "Wenatchee River", movements = WEN_spilldays_movements)
-WEN_wild_covariate_experiences <- extract_covariate_experiences(envir = UCW_envir, rear = "wild", origin_select = "Wenatchee River")
-WEN_hatchery_covariate_experiences <- extract_covariate_experiences(envir = UCH_envir, rear = "hatchery", origin_select = "Wenatchee River")
-
-### Entiat River ###
-ENT_spilldays_movements <- data.frame(from = c(7,7), to = c(6, 41),
-                                      Movement = c("Fallback",
-                                                   "Loss"))
-ENT_wild_spill_move_prob_array <- estimate_spilldays_effect_UCW(origin_select = "Entiat River", movements = ENT_spilldays_movements)
-ENT_hatchery_spill_move_prob_array <- estimate_spilldays_effect_UCH(origin_select = "Entiat River", movements = ENT_spilldays_movements)
-ENT_wild_covariate_experiences <- extract_covariate_experiences(envir = UCW_envir, rear = "wild", origin_select = "Entiat River")
-ENT_hatchery_covariate_experiences <- extract_covariate_experiences(envir = UCH_envir, rear = "hatchery", origin_select = "Entiat River")
-
-### Tucannon River ###
-TUC_spilldays_movements <- data.frame(from = c(9,9), to = c(8, 41),
-                                      Movement = c("Fallback",
-                                                   "Loss"))
-TUC_wild_spill_move_prob_array <- estimate_spilldays_effect_SRW(origin_select = "Tucannon River", movements = TUC_spilldays_movements)
-TUC_hatchery_spill_move_prob_array <- estimate_spilldays_effect_SRH(origin_select = "Tucannon River", movements = TUC_spilldays_movements)
-TUC_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, rear = "wild", origin_select = "Tucannon River")
-TUC_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, rear = "hatchery", origin_select = "Tucannon River")
-
-
-
-
-
 #### Create figures for individual origins: ####
 
 
@@ -1258,7 +1228,7 @@ JDR_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movem
                                                                                      spill_predict = seq(0, 0.90, length = 100), 
                                                                                      movements_evaluated = JDR_spilldays_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "JDR_wild_compare_movement_spill.png"), JDR_wild_compare_movement_spill, height = 8, width = 8)
+ggsave(here::here("figures", "presentation", "JDR_wild_compare_movement_spill.png"), JDR_wild_compare_movement_spill, height = 8, width = 8)
 
 ### Umatilla River ###
 
@@ -1270,7 +1240,7 @@ UMA_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movem
                                                                                      spill_predict = seq(0, 0.90, length = 100), 
                                                                                      movements_evaluated = UMA_spilldays_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "UMA_wild_compare_movement_spill.png"), UMA_wild_compare_movement_spill, height = 8, width = 8)
+ggsave(here::here("figures", "presentation", "UMA_wild_compare_movement_spill.png"), UMA_wild_compare_movement_spill, height = 8, width = 8)
 
 # UMA hatchery plot
 UMA_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Umatilla River",
@@ -1279,7 +1249,7 @@ UMA_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_m
                                                                                          spill_predict = seq(0, 0.90, length = 100), 
                                                                                          movements_evaluated = UMA_spilldays_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "UMA_hatchery_compare_movement_spill.png"), UMA_hatchery_compare_movement_spill, height = 8, width = 8)
+ggsave(here::here("figures", "presentation", "UMA_hatchery_compare_movement_spill.png"), UMA_hatchery_compare_movement_spill, height = 8, width = 8)
 
 ### Yakima River ###
 
@@ -1290,7 +1260,7 @@ YAK_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movem
                                                                                      spill_predict = seq(0, 0.90, length = 100), 
                                                                                      movements_evaluated = YAK_spilldays_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "YAK_wild_compare_movement_spill.png"), YAK_wild_compare_movement_spill, height = 8, width = 8)
+ggsave(here::here("figures", "presentation", "YAK_wild_compare_movement_spill.png"), YAK_wild_compare_movement_spill, height = 8, width = 8)
 
 
 
@@ -1304,7 +1274,7 @@ WAWA_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_move
                                                                                       spill_predict = seq(0, 0.90, length = 100), 
                                                                                       movements_evaluated = WAWA_spilldays_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "WAWA_wild_compare_movement_spill.png"), WAWA_wild_compare_movement_spill, height = 8, width = 8)
+ggsave(here::here("figures", "presentation", "WAWA_wild_compare_movement_spill.png"), WAWA_wild_compare_movement_spill, height = 8, width = 8)
 
 # WAWA hatchery plot
 WAWA_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Walla Walla River",
@@ -1313,90 +1283,7 @@ WAWA_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_
                                                                                           spill_predict = seq(0, 0.90, length = 100), 
                                                                                           movements_evaluated = WAWA_spilldays_movements)
 
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "WAWA_hatchery_compare_movement_spill.png"), WAWA_hatchery_compare_movement_spill, height = 8, width = 8)
-
-### Wenatchee River ###
-
-
-# WEN wild plot
-WEN_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Wenatchee River",
-                                                                                     wild_move_prob_array = WEN_wild_spill_move_prob_array,
-                                                                                     wild_covariate_experiences = WEN_wild_covariate_experiences,
-                                                                                     spill_predict = seq(0, 0.90, length = 100), 
-                                                                                     movements_evaluated = WEN_spilldays_movements)
-
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "WEN_wild_compare_movement_spill.png"), WEN_wild_compare_movement_spill, height = 8, width = 8)
-
-# WEN hatchery plot
-WEN_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Wenatchee River",
-                                                                                         hatchery_move_prob_array = WEN_hatchery_spill_move_prob_array,
-                                                                                         hatchery_covariate_experiences = WEN_hatchery_covariate_experiences,
-                                                                                         spill_predict = seq(0, 0.90, length = 100), 
-                                                                                         movements_evaluated = WEN_spilldays_movements)
-
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "WEN_hatchery_compare_movement_spill.png"), WEN_hatchery_compare_movement_spill, height = 8, width = 8)
-
-### Entiat River ###
-
-
-# ENT wild plot
-ENT_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Entiat River",
-                                                                                     wild_move_prob_array = ENT_wild_spill_move_prob_array,
-                                                                                     wild_covariate_experiences = ENT_wild_covariate_experiences,
-                                                                                     spill_predict = seq(0, 0.90, length = 100), 
-                                                                                     movements_evaluated = ENT_spilldays_movements)
-
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "ENT_wild_compare_movement_spill.png"), ENT_wild_compare_movement_spill, height = 8, width = 8)
-
-
-### Tucannon River ###
-
-
-# TUC wild plot
-TUC_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Tucannon River",
-                                                                                     wild_move_prob_array = TUC_wild_spill_move_prob_array,
-                                                                                     wild_covariate_experiences = TUC_wild_covariate_experiences,
-                                                                                     spill_predict = seq(0, 0.90, length = 100), 
-                                                                                     movements_evaluated = TUC_spilldays_movements)
-
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "TUC_wild_compare_movement_spill.png"), TUC_wild_compare_movement_spill, height = 8, width = 8)
-
-# TUC hatchery plot
-TUC_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Tucannon River",
-                                                                                         hatchery_move_prob_array = TUC_hatchery_spill_move_prob_array,
-                                                                                         hatchery_covariate_experiences = TUC_hatchery_covariate_experiences,
-                                                                                         spill_predict = seq(0, 0.90, length = 100), 
-                                                                                         movements_evaluated = TUC_spilldays_movements)
-
-ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "TUC_hatchery_compare_movement_spill.png"), TUC_hatchery_compare_movement_spill, height = 8, width = 8)
-
-# ### Imnaha River ###
-# IMN_spilldays_movements <- data.frame(from = c(9,9), to = c(8, 41),
-#                             Movement = c("Fallback",
-#                                          "Loss"))
-# IMN_wild_spill_move_prob_array <- estimate_spilldays_effect_SRW(origin_select = "Imnaha River", movements = IMN_spilldays_movements)
-# IMN_hatchery_spill_move_prob_array <- estimate_spilldays_effect_SRH(origin_select = "Imnaha River", movements = IMN_spilldays_movements)
-# IMN_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, rear = "wild", origin_select = "Imnaha River")
-# IMN_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, rear = "hatchery", origin_select = "Imnaha River")
-# 
-# 
-# # IMN wild plot
-# IMN_wild_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Imnaha River",
-#                                                                                      wild_move_prob_array = IMN_wild_spill_move_prob_array,
-#                                                                                      wild_covariate_experiences = IMN_wild_covariate_experiences,
-#                                                                                      spill_predict = seq(0, 0.90, length = 100), 
-#                                                                                      movements_evaluated = IMN_spilldays_movements)
-# 
-# ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "IMN_wild_compare_movement_spill.png"), IMN_wild_compare_movement_spill, height = 8, width = 8)
-# 
-# # IMN hatchery plot
-# IMN_hatchery_compare_movement_spill <- plot_compare_rear_spill_effect_multiple_movements(origin_select = "Imnaha River",
-#                                                                                          hatchery_move_prob_array = IMN_hatchery_spill_move_prob_array,
-#                                                                                          hatchery_covariate_experiences = IMN_hatchery_covariate_experiences,
-#                                                                                          spill_predict = seq(0, 0.90, length = 100), 
-#                                                                                          movements_evaluated = IMN_spilldays_movements)
-# 
-# ggsave(here::here("stan_actual", "output", "covariate_effects", "spilldays", "IMN_hatchery_compare_movement_spill.png"), IMN_hatchery_compare_movement_spill, height = 8, width = 8)
+ggsave(here::here("figures", "presentation", "WAWA_hatchery_compare_movement_spill.png"), WAWA_hatchery_compare_movement_spill, height = 8, width = 8)
 
 
 # Create the legend figure by itself
@@ -1412,33 +1299,15 @@ spill_plot_legend_gg <- as_ggplot(spill_legend) + theme(plot.margin=grid::unit(c
                                                         panel.background = element_rect(fill = "white", color = "white"))
 
 
-#### Generate the figure for the paper ####
+#### Generate the figure for the presentation ####
 
-# combined_movement_spill_plot <- ggarrange(JDR_wild_compare_movement_spill, UMA_wild_compare_movement_spill, UMA_hatchery_compare_movement_spill,
-#                                           YAK_wild_compare_movement_spill, WAWA_wild_compare_movement_spill, WAWA_hatchery_compare_movement_spill,
-#                                           WEN_wild_compare_movement_spill, WEN_hatchery_compare_movement_spill, ENT_wild_compare_movement_spill,
-#                                           TUC_wild_compare_movement_spill, TUC_hatchery_compare_movement_spill, IMN_wild_compare_movement_spill, 
-#                                           IMN_hatchery_compare_movement_spill, plot_legend_gg, nrow = 4, ncol = 4,
-#                                           labels = c("(A)", "(B)", "(C)", "(D)", "(E)", "(F)", "(G)", "(H)", "(I)",
-#                                                      "(J)", "(K)", "(L)", "(M)"),
-#                                           label.x = 0.00, label.y = 0.95, font.label = list(size = 10, face = "plain"),
-#                                           hjust = 0, vjust = 0)
-# 
-# ggsave(here::here("stan_actual", "output", "paper_figures", "combined_movement_spill_plot_v1.png"), combined_movement_spill_plot, height = 12, width = 16)
-
-# drop imnaha
-combined_movement_spill_plot <- ggarrange(JDR_wild_compare_movement_spill, UMA_wild_compare_movement_spill, UMA_hatchery_compare_movement_spill,
+combined_movement_spill_plot_pres <- ggarrange(JDR_wild_compare_movement_spill, UMA_wild_compare_movement_spill, UMA_hatchery_compare_movement_spill,
                                           YAK_wild_compare_movement_spill, WAWA_wild_compare_movement_spill, WAWA_hatchery_compare_movement_spill,
-                                          WEN_wild_compare_movement_spill, WEN_hatchery_compare_movement_spill, ENT_wild_compare_movement_spill,
-                                          TUC_wild_compare_movement_spill, TUC_hatchery_compare_movement_spill, 
-                                          spill_plot_legend_gg, nrow = 3, ncol = 4,
+                                          nrow = 2, ncol = 3,
                                           labels = c("(A) JDR, Natural", "(B) UMA, Natural", 
                                                      "(C) UMA, Hatchery", "(D) YAK, Natural", 
-                                                     "(E) WAWA, Natural", "(F) WAWA, Hatchery", 
-                                                     "(G) WEN, Natural", "(H) WEN, Hatchery", 
-                                                     "(I) ENT, Natural",
-                                                     "(J) TUC, Natural", "(K) TUC, Hatchery"),
-                                          label.x = 0.05, label.y = 0.925, font.label = list(size = 14, face = "plain"),
+                                                     "(E) WAWA, Natural", "(F) WAWA, Hatchery"),
+                                          label.x = 0.05, label.y = 0.945, font.label = list(size = 24, face = "plain"),
                                           hjust = 0, vjust = 0)
 
 # combined_movement_spill_plot <- annotate_figure(combined_movement_spill_plot,
@@ -1447,9 +1316,15 @@ combined_movement_spill_plot <- ggarrange(JDR_wild_compare_movement_spill, UMA_w
 
 # Let's try this again, this time using a cowplot solution since ggpubr is
 # struggling with the background color
-combined_movement_spill_plot <- cowplot::ggdraw(annotate_figure(combined_movement_spill_plot,
-                                                                bottom = textGrob("Days of winter spill", gp = gpar(cex = 1.3)),
-                                                                left = textGrob("Movement probability", rot = 90, gp = gpar(cex = 1.3)))) +
+# add a buffer for the y-axis
+combined_movement_spill_plot_pres <- cowplot::ggdraw(annotate_figure(combined_movement_spill_plot_pres,
+                                                                    left = textGrob(" ", rot = 90, gp = gpar(cex = 0.4)))) +
   theme(plot.background = element_rect(fill="white", color = NA))
 
-ggsave(here::here("stan_actual", "output", "paper_figures", "combined_movement_spill_plot_v2.png"), combined_movement_spill_plot, height = 12, width = 16)
+combined_movement_spill_plot_pres <- cowplot::ggdraw(annotate_figure(combined_movement_spill_plot_pres,
+                                                                    bottom = textGrob("Days of winter spill", gp = gpar(cex = 2.6)),
+                                                                    left = textGrob("Movement probability", rot = 90, gp = gpar(cex = 2.6)))) +
+  theme(plot.background = element_rect(fill="white", color = NA))
+
+
+ggsave(here::here("figures", "presentation", "combined_movement_spill_plot_pres.png"), combined_movement_spill_plot_pres, height = 12, width = 16)
