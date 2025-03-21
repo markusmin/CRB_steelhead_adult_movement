@@ -1604,103 +1604,316 @@ combined_DES_move_long %>%
   mutate(origin_rear = paste0(origin, ", ", rear)) -> combined_DES_move_summary
 
 # Drop Fifteenmile Creek and Deschutes
+# plot(x = subset(combined_DES_move_summary, origin == "Deschutes River")$temp_actual, y = subset(combined_DES_move_summary, origin == "Deschutes River")$`0.5`)
+# plot(x = subset(combined_DES_move_summary, origin == "John Day River")$temp_actual, y = subset(combined_DES_move_summary, origin == "John Day River")$`0.5`)
 # Deschutes is the home tributary so it's not what we're interested in; Fifteenmile
 # Creek is before Deschutes to it's of a different nature than the other tributaries
+# That being said, those two tributaries do exhibit pretty similar responses to temperature as do others
+# combined_DES_move_summary %>% 
+#   filter(!(origin %in% c("Fifteenmile Creek", "Deschutes River"))) -> combined_DES_move_summary
+
+
+### Step 3: Get covariate experiences ###
+
+## extract covariate experiences for each origin/rear combination ##
+# Middle Columbia, wild
+JDR_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, 
+                                                                rear = "wild", origin_select = "John Day River")
+
+DES_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, 
+                                                                rear = "wild", origin_select = "Deschutes River")
+
+UMA_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, 
+                                                                rear = "wild", origin_select = "Umatilla River")
+
+FIF_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, 
+                                                                rear = "wild", origin_select = "Fifteenmile Creek")
+
+YAK_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, 
+                                                                rear = "wild", origin_select = "Yakima River")
+
+WAWA_wild_covariate_experiences <- extract_covariate_experiences(envir = MCW_envir, 
+                                                                 rear = "wild", origin_select = "Walla Walla River")
+
+
+# Middle Columbia, hatchery
+UMA_hatchery_covariate_experiences <- extract_covariate_experiences(envir = MCH_envir, 
+                                                                    rear = "hatchery", origin_select = "Umatilla River")
+
+WAWA_hatchery_covariate_experiences <- extract_covariate_experiences(envir = MCH_envir, 
+                                                                     rear = "hatchery", origin_select = "Walla Walla River")
+
+# Upper Columbia, wild
+WEN_wild_covariate_experiences <- extract_covariate_experiences(envir = UCW_envir, 
+                                                                rear = "wild", origin_select = "Wenatchee River")
+
+ENT_wild_covariate_experiences <- extract_covariate_experiences(envir = UCW_envir, 
+                                                                rear = "wild", origin_select = "Entiat River")
+
+MET_wild_covariate_experiences <- extract_covariate_experiences(envir = UCW_envir, 
+                                                                rear = "wild", origin_select = "Methow River")
+
+# Upper Columbia, hatchery
+WEN_hatchery_covariate_experiences <- extract_covariate_experiences(envir = UCH_envir, 
+                                                                    rear = "hatchery", origin_select = "Wenatchee River")
+
+OKA_hatchery_covariate_experiences <- extract_covariate_experiences(envir = UCH_envir, 
+                                                                    rear = "hatchery", origin_select = "Okanogan River")
+
+MET_hatchery_covariate_experiences <- extract_covariate_experiences(envir = UCH_envir, 
+                                                                    rear = "hatchery", origin_select = "Methow River")
+
+# Snake River, wild
+TUC_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, 
+                                                                rear = "wild", origin_select = "Tucannon River")
+
+ASO_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, 
+                                                                rear = "wild", origin_select = "Asotin Creek")
+
+CLE_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, 
+                                                                rear = "wild", origin_select = "Clearwater River")
+
+SAL_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, 
+                                                                rear = "wild", origin_select = "Salmon River")
+
+GR_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, 
+                                                               rear = "wild", origin_select = "Grande Ronde River")
+
+IMN_wild_covariate_experiences <- extract_covariate_experiences(envir = SRW_envir, 
+                                                                rear = "wild", origin_select = "Imnaha River")
+
+# Snake River, hatchery
+TUC_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, 
+                                                                    rear = "hatchery", origin_select = "Tucannon River")
+
+CLE_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, 
+                                                                    rear = "hatchery", origin_select = "Clearwater River")
+
+SAL_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, 
+                                                                    rear = "hatchery", origin_select = "Salmon River")
+
+GR_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, 
+                                                                   rear = "hatchery", origin_select = "Grande Ronde River")
+
+IMN_hatchery_covariate_experiences <- extract_covariate_experiences(envir = SRH_envir, 
+                                                                    rear = "hatchery", origin_select = "Imnaha River")
+
+## combine covariate experiences
+mutate(JDR_wild_covariate_experiences, origin_rear = "John Day River, natural") %>% 
+  bind_rows( # MCW
+    mutate(UMA_wild_covariate_experiences, origin_rear = "Umatilla River, natural"),
+    mutate(YAK_wild_covariate_experiences, origin_rear = "Yakima River, natural"), 
+    mutate(WAWA_wild_covariate_experiences, origin_rear = "Walla Walla River, natural"), 
+    mutate(FIF_wild_covariate_experiences, origin_rear = "Fifteenmile Creek, natural"), 
+    mutate(DES_wild_covariate_experiences, origin_rear = "Deschutes River, natural"), 
+    # MCH
+    mutate(UMA_hatchery_covariate_experiences, origin_rear = "Umatilla River, hatchery"), 
+    mutate(WAWA_hatchery_covariate_experiences, origin_rear = "Walla Walla River, hatchery"),
+    # UCW
+    mutate(WEN_wild_covariate_experiences, origin_rear = "Wenatchee River, natural"), 
+    mutate(ENT_wild_covariate_experiences, origin_rear = "Entiat River, natural"),
+    mutate(MET_wild_covariate_experiences, origin_rear = "Methow River, natural"),
+    # UCH
+    mutate(WEN_hatchery_covariate_experiences, origin_rear = "Wenatchee River, hatchery"), 
+    mutate(OKA_hatchery_covariate_experiences, origin_rear = "Okanogan River, hatchery"),
+    mutate(MET_hatchery_covariate_experiences, origin_rear = "Methow River, hatchery"),
+    # SRW
+    mutate(TUC_wild_covariate_experiences, origin_rear = "Tucannon River, natural"), 
+    mutate(ASO_wild_covariate_experiences, origin_rear = "Asotin Creek, natural"),
+    mutate(CLE_wild_covariate_experiences, origin_rear = "Clearwater River, natural"), 
+    mutate(SAL_wild_covariate_experiences, origin_rear = "Salmon River, natural"),
+    mutate(GR_wild_covariate_experiences, origin_rear = "Grande Ronde River, natural"), 
+    mutate(IMN_wild_covariate_experiences, origin_rear = "Imnaha River, natural"),
+    # SRH
+    mutate(TUC_hatchery_covariate_experiences, origin_rear = "Tucannon River, hatchery"),
+    mutate(CLE_hatchery_covariate_experiences, origin_rear = "Clearwater River, hatchery"), 
+    mutate(SAL_hatchery_covariate_experiences, origin_rear = "Salmon River, hatchery"),
+    mutate(GR_hatchery_covariate_experiences, origin_rear = "Grande Ronde River, hatchery"), 
+    mutate(IMN_hatchery_covariate_experiences, origin_rear = "Imnaha River, hatchery")
+  ) -> combined_covariate_experiences
+
+populations_DPS <- data.frame(origin_rear = sort(unique(combined_covariate_experiences$origin_rear)),
+                              DPS = c("Snake River, natural",
+                                      "Snake River, hatchery",
+                                      "Snake River, natural",
+                                      "Middle Columbia, natural",
+                                      "Upper Columbia, natural",
+                                      "Middle Columbia, natural",
+                                      "Snake River, hatchery",
+                                      "Snake River, natural",
+                                      "Snake River, hatchery",
+                                      "Snake River, natural",
+                                      "Middle Columbia, natural",
+                                      "Upper Columbia, hatchery",
+                                      "Upper Columbia, natural",
+                                      "Upper Columbia, hatchery",
+                                      "Snake River, hatchery",
+                                      "Snake River, natural",
+                                      "Snake River, hatchery",
+                                      "Snake River, natural",
+                                      "Middle Columbia, hatchery",
+                                      "Middle Columbia, natural",
+                                      "Middle Columbia, hatchery",
+                                      "Middle Columbia, natural",
+                                      "Upper Columbia, hatchery",
+                                      "Upper Columbia, natural",
+                                      "Middle Columbia, natural"))
+
+combined_covariate_experiences %>% 
+  left_join(populations_DPS, by = "origin_rear") %>% 
+  mutate(rear = gsub(".*, ", "", origin_rear)) %>% 
+  filter(state == 2) -> combined_covariate_experiences_DES
+
+# convert temp to temp_actual in covariate experiences
+combined_covariate_experiences_DES %>% 
+  mutate(temp_actual = window_temp_summary[, "BON_mean"] + 
+           window_temp_summary[, "BON_sd"]*temperature) -> combined_covariate_experiences_DES
+
+
 combined_DES_move_summary %>% 
-  filter(!(origin %in% c("Fifteenmile Creek", "Deschutes River"))) -> combined_DES_move_summary
+  left_join(populations_DPS, by = "origin_rear") -> combined_DES_move_summary
 
-# Reorder these for plotting
-combined_DES_move_summary$origin_rear <- factor(combined_DES_move_summary$origin_rear, levels = 
-                                                  c("John Day River, natural",
-                                                    "Umatilla River, hatchery",    
-                                                    "Umatilla River, natural",
-                                                    "Walla Walla River, hatchery",
-                                                    "Walla Walla River, natural",  
-                                                    "Yakima River, natural",
-                                                    "Upper Columbia, hatchery",    
-                                                    "Upper Columbia, natural",
-                                                    "Snake River, hatchery",       
-                                                    "Snake River, natural"      
-                                                    ))
+#### Deschutes river plot: 6-panel figure, with marginal histograms ####
 
-combined_DES_move_summary$origin <- factor(combined_DES_move_summary$origin, levels = 
-                                                  c("John Day River",
-                                                    "Umatilla River",    
-                                                    "Walla Walla River",  
-                                                    "Yakima River",
-                                                    "Upper Columbia",
-                                                    "Snake River"
-                                                  ))
+# function to create a plot of movement into Deschutes vs. temperature, with a histogram, for one population/DPS
 
+plot_deschutes_temp_movement_onepop <- function(origin_rear_select = NA, DPS_select = NA){
+  
+  # can either subset a single origin/rear or a whole DPS
+  if(!is.na(origin_rear_select)[1]){
+    move_prob_data <- subset(combined_DES_move_summary, origin_rear %in% origin_rear_select)
+    covariate_data <- subset(combined_covariate_experiences_DES, origin_rear %in% origin_rear_select)
+  } else {
+    move_prob_data <- subset(combined_DES_move_summary, origin_rear %in% DPS_select)
+    covariate_data <- subset(combined_covariate_experiences_DES, DPS %in% DPS_select)
+  }
+  
+  
+  des_move_prob_plot <- ggplot(move_prob_data, aes(x = temp_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
+                                                              color = rear, fill = rear)) +
+    geom_line() +
+    geom_ribbon(alpha = 0.2, color = NA) +
+    scale_y_continuous(lim = c(0,1)) +
+    # scale_linetype_manual(values = c("natural" = 1, "hatchery" = 2), name = "Rearing Type") +
+    scale_color_manual(values = c("natural" = "#1f78b4", "hatchery" = "#b2df8a"), name = "Rearing Type") +
+    scale_fill_manual(values = c("natural" = "#1f78b4", "hatchery" = "#b2df8a"), name = "Rearing Type") +
+    # common x-axis scale across all populations
+    coord_cartesian(xlim = c(4, 22.5), expand = FALSE) +
+    # xlab(expression(~"Temperature" ~ ("°C"))) +
+    # ylab("Movement probability") +
+    theme(legend.position = "none",
+          panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          # turn off the axis titles on each individual plot and just show one for whole plot
+          axis.title = element_blank(),
+          # these plot margins are to leave space for the population name on the big figure
+          plot.margin = unit(c(0, 0.3, 0.2, 0.2),"cm"))
+  
+  des_density_plot <- ggplot(covariate_data, 
+                                       aes(temp_actual, fill = rear))+
+    geom_histogram(aes(y=..count../sum(..count..)), alpha = 0.5, bins = 60, boundary = 0) +
+    ylab("Density") +
+    scale_fill_manual(values = c("natural" = "#1f78b4", "hatchery" = "#b2df8a"), name = "Rearing Type") +
+    # these labels aren't real, they just need to be the same size as the labels from the temp effect plot
+    scale_y_continuous(n.breaks = 2, labels = c("0.00", "1.00")) +
+    # xlim(0,150) +
+    # common x-axis scale across all populations
+    coord_cartesian(xlim = c(4, 22.5), expand = FALSE) +
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.text.y = element_text(color = "white"),
+          axis.ticks.x = element_blank(),
+          # axis.ticks.length.x=unit(.1, "cm"),
+          axis.ticks.length.x=unit(0, "cm"),
+          axis.ticks.y = element_line(color = "white"),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          panel.background = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank(),
+          # these plot margins are to leave space for the population name on the big figure
+          plot.margin = unit(c(0.2, 0.3, 0, 0.2),"cm"))
+  
+  combined_des_plot <- ggarrange(des_density_plot, des_move_prob_plot, nrow = 2, ncol = 1,
+                             heights = c(3,6))
+  
+  return(combined_des_plot)
+}
 
-### Step 3: Generate and export the plot ###
+# create legend by itself
 
-DES_temp_move_prob_plot <- ggplot(combined_DES_move_summary, aes(x = temp_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
-                                                                      color = origin_rear, fill = origin_rear)) +
+des_move_prob_plot_legend <- ggplot(subset(combined_DES_move_summary, origin_rear %in% c("Walla Walla River, natural",
+                                                                                         "Walla Walla River, hatchery")), aes(x = temp_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
+                                                 color = rear, fill = rear)) +
   geom_line() +
   geom_ribbon(alpha = 0.2, color = NA) +
   scale_y_continuous(lim = c(0,1)) +
+  # scale_linetype_manual(values = c("natural" = 1, "hatchery" = 2), name = "Rearing Type") +
+  scale_color_manual(values = c("natural" = "#1f78b4", "hatchery" = "#b2df8a"), name = "Rearing Type") +
+  scale_fill_manual(values = c("natural" = "#1f78b4", "hatchery" = "#b2df8a"), name = "Rearing Type") +
   # common x-axis scale across all populations
   coord_cartesian(xlim = c(4, 22.5), expand = FALSE) +
-  # scale_x_continuous(lim = c(floor(min(covariate_experiences$temp_actual)),ceiling(max(covariate_experiences$temp_actual))), expand = c(0,0)) +
-  # scale_color_manual(values = movement_colors) +
-  # scale_fill_manual(values =  movement_colors) +
-  xlab(expression(~"Temperature" ~ ("°C"))) +
-  ylab("Movement probability") +
+  # xlab(expression(~"Temperature" ~ ("°C"))) +
+  # ylab("Movement probability") +
   theme(panel.grid.major = element_line(color = "gray90"),
-        panel.background = element_rect(fill = "white", color = "black"),
-        panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
-        # turn off the axis titles on each individual plot and just show one for whole plot
-        axis.title = element_blank(),
-        # these plot margins are to leave space for the population name on the big figure
-        plot.margin = unit(c(0, 0.2, 0.2, 0.2),"cm"))
-
-
-ggsave(here::here("figures", "paper_figures", "Fig5_deschutes_temp_movements.png"), DES_temp_move_prob_plot, height = 8, width = 10)
-
-# Version 2 - without the credible intervals, to make it easier to interpret
-# Set MC to one
-# Set SR and UC to a different one
-origin_rear_linetypes <- c("John Day River, natural" = 1,  
-                           "Snake River, hatchery" = 2,       
-                           "Snake River, natural" = 2,        
-                           "Umatilla River, hatchery" = 1,    
-                           "Umatilla River, natural" = 1,
-                           "Upper Columbia, hatchery" = 2,    
-                           "Upper Columbia, natural" = 2,     
-                           "Walla Walla River, hatchery" = 1,
-                           "Walla Walla River, natural" = 1,  
-                           "Yakima River, natural" = 1)
-
-
-DES_temp_move_prob_plot <- ggplot(combined_DES_move_summary, aes(x = temp_actual, y = `0.5`, ymin = `0.025`, ymax = `0.975`, 
-                                                                 color = origin, fill = origin, linetype = rear)) +
-  geom_line() +
-  # geom_ribbon(alpha = 0.2, color = NA) +
-  scale_y_continuous(lim = c(0,0.55)) +
-  scale_linetype_manual(values = c("natural" = 1, "hatchery" = 2), name = "Rearing Type") +
-  # common x-axis scale across all populations
-  coord_cartesian(xlim = c(4, 22.5), expand = FALSE) +
-  # scale_x_continuous(lim = c(floor(min(covariate_experiences$temp_actual)),ceiling(max(covariate_experiences$temp_actual))), expand = c(0,0)) +
-  # scale_color_manual(values = movement_colors) +
-  scale_color_tableau(palette = "Tableau 10", name = "Natal Origin") +
-  # scale_fill_manual(values =  movement_colors) +
-  xlab(expression(~"Temperature" ~ ("°C"))) +
-  ylab("Movement probability") +
-  theme(panel.grid.major = element_blank(), #element_line(color = "gray90"),
-        panel.background = element_rect(fill = "white", color = "black"),
-        legend.key = element_blank(),
-        panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
-        legend.position = c(0.15, 0.75),
-        legend.key.height = unit(0.55, "cm"),
-        legend.key.width = unit(0.55, "cm"),
-        legend.title = element_text(size = 16),
+        panel.background = element_rect(fill = "white", color = NA),
+        panel.border = element_rect(color = NA, fill=NA, linewidth=0.4),
+        legend.key.height = unit(1, "cm"),
+        legend.key.width = unit(1, "cm"),
+        legend.title = element_text(size = 15),
         legend.text = element_text(size = 10),
-        # turn off the axis titles on each individual plot and just show one for whole plot
-        # axis.title = element_blank(),
+        legend.position = "bottom",
         # these plot margins are to leave space for the population name on the big figure
-        plot.margin = unit(c(0, 0.2, 0.2, 0.2),"cm"))
+        plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm"))
+
+des_temp_legend <- ggpubr::get_legend(des_move_prob_plot_legend)
+des_temp_legend_gg <- as_ggplot(des_temp_legend) + theme(panel.background = element_rect(fill = "white", color = "white"))
 
 
-ggsave(here::here("figures", "paper_figures", "Fig5_deschutes_temp_movements.png"), DES_temp_move_prob_plot, height = 8, width = 10)
 
+# plot different origins/populations
+FIF_des_temp_plot <- plot_deschutes_temp_movement_onepop(origin_rear_select = "Fifteenmile Creek, natural")
+
+DES_des_temp_plot <- plot_deschutes_temp_movement_onepop(origin_rear_select = "Deschutes River, natural")
+
+JDR_des_temp_plot <- plot_deschutes_temp_movement_onepop(origin_rear_select = "John Day River, natural")
+
+UMA_des_temp_plot <- plot_deschutes_temp_movement_onepop(origin_rear_select = c("Umatilla River, natural",
+                                                                                "Umatilla River, hatchery"))
+
+WAWA_des_temp_plot <- plot_deschutes_temp_movement_onepop(origin_rear_select = c("Walla Walla River, natural",
+                                                                                 "Walla Walla River, hatchery"))
+
+YAK_des_temp_plot <- plot_deschutes_temp_movement_onepop(origin_rear_select = "Yakima River, natural")
+
+UC_des_temp_plot <- plot_deschutes_temp_movement_onepop(DPS_select = c("Upper Columbia, natural", "Upper Columbia, hatchery"))
+
+SR_des_temp_plot <- plot_deschutes_temp_movement_onepop(DPS_select = c("Snake River, natural", "Snake River, hatchery"))
+
+combined_DES_temp <- ggarrange(FIF_des_temp_plot, DES_des_temp_plot,
+                               JDR_des_temp_plot, UMA_des_temp_plot, 
+                              WAWA_des_temp_plot, YAK_des_temp_plot, 
+                              UC_des_temp_plot, SR_des_temp_plot, 
+                                         nrow = 4, ncol = 2,
+                                         labels = c("(A) Fifteenmile Creek", "(B) Deschutes River",
+                                                    "(C) John Day River", "(D) Umatilla River",
+                                                    "(E) Walla Walla River", "(F) Yakima River",
+                                                    "(G) Upper Columbia", "(H) Snake River"),
+                                         label.x = 0.05, label.y = 0.9, font.label = list(size = 14, face = "plain"),
+                                         hjust = 0, vjust = 0)
+
+
+combined_DES_temp <- cowplot::ggdraw(annotate_figure(combined_DES_temp,
+                                                               bottom = textGrob(expression(~"Temperature" ~ ("°C")), gp = gpar(cex = 1.3)),
+                                                               left = textGrob("Probability of movement into the Deschutes River", rot = 90, gp = gpar(cex = 1.3)))) +
+  theme(plot.background = element_rect(fill="white", color = NA))
+
+# add the legend
+combined_DES_temp <- ggarrange(combined_DES_temp, des_temp_legend_gg,
+                               nrow = 2, ncol = 1,
+                               heights = c(10, 1))
+
+
+ggsave(here::here("figures", "paper_figures", "Fig5_deschutes_temp_movements.png"), 
+       combined_DES_temp, height = 8, width = 8)

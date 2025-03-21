@@ -65,9 +65,7 @@ extract_covariate_experiences <- function(envir, rear, origin_select){
     filter(!(state %in% c(0,41))) -> pop_states_dates_covariates
   
   # now add winter post-overshoot vector
-  # temporary fix
-  pop_states_dates_covariates$winter_post_overshoot_vector <- as.vector(envir$data$winter_post_overshoot_vector)[-15354]
-  # pop_states_dates_covariates$winter_post_overshoot_vector <- as.vector(envir$data$winter_post_overshoot_vector)
+  pop_states_dates_covariates$winter_post_overshoot_vector <- as.vector(envir$data$winter_post_overshoot_vector)
   
   
   # Now, keep only the origin selected
@@ -1132,7 +1130,7 @@ plot_compare_rear_spill_effect_multiple_movements <- function(origin_select,
       # geom_density(alpha = 0.1) +
       # geom_rug(sides = "t", length = unit(0.2, "cm"), outside = FALSE) +
       # geom_histogram(alpha = 0.5, bins = 60) +
-      geom_histogram(aes(y=..count../sum(..count..)), alpha = 0.5, bins = 60) +
+      geom_histogram(aes(y=..count../sum(..count..)), alpha = 0.5, bins = 60, boundary = 0) +
       ylab("Density") +
       # scale_x_continuous(lim = c(floor(min(covariate_experiences$temp_actual)),ceiling(max(covariate_experiences$temp_actual))), expand = c(0,0)) +
       # scale_x_continuous(lim = c(0, 23), expand = c(0,0)) +
@@ -1452,4 +1450,4 @@ combined_movement_spill_plot <- cowplot::ggdraw(annotate_figure(combined_movemen
                                                                 left = textGrob("Movement probability", rot = 90, gp = gpar(cex = 1.3)))) +
   theme(plot.background = element_rect(fill="white", color = NA))
 
-ggsave(here::here("stan_actual", "output", "paper_figures", "combined_movement_spill_plot_v2.png"), combined_movement_spill_plot, height = 12, width = 16)
+ggsave(here::here("figures", "paper_figures",  "Fig6_spilldays_plot.png"), combined_movement_spill_plot, height = 12, width = 16)
