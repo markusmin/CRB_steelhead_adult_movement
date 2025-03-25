@@ -1,0 +1,338 @@
+---
+title: "Supplemental Materials for Min et al. 2025"
+author: "Markus Min"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(here)
+library(kableExtra)
+```
+
+## Supplemental Methods
+
+### Supplemental Methods 1: Tributary detection efficiency
+
+Detection efficiency at the in-stream PIT tag array closest to the mouth of the tributary (the confluence of the tributary with the mainstem Columbia or Snake River) was estimated for each tributary state. However, detection efficiency was not modeled for three tributaries of the Snake River (the Salmon River, the Grande Ronde River, and the Clearwater River), as these tributaries did not have a detection site on the mainstem of the tributary within 100 km of the confluence.
+
+We modeled detection efficiency in tributaries using logistic regression based on two predictors: 1) changes in antenna configurations over time, and 2) the discharge in the tributary. Changes in antenna configurations were identified from the operational history of the site, based on antennas being installed, decommissioned, upgraded, or moved. Changes in antenna configurations are identified in Table S1. Discharge was included as a predictor based on our hypothesis that river stage would influence the antenna coverage of the river channel. Discharge data were queried from USGS by finding the station on the interactive USGS dashboard closest the river mouth array and navigating to the data page for the specific site. Discharge data were available for all tributaries except Fifteenmile Creek and the Imnaha River; detection efficiency in these tributaries was therefore only modeled as a function of antenna configurations.
+
+Table S1: Tributary PIT tag antenna configurations used in detection efficiency estimation. Years refer to the Steelhead run years in which the site was active in a specific configuration. Site refers to the PIT tag detection site chosen for the detection efficiency estimation, based on its proximity to the mouth of the tributary. Configuration refers to the configuration of antennas at the site, where Initial is the name given to the antenna configuration at the site at the start of the time series, and any subsequent changes from the initial configuration at the site are noted in this column.
+
+| Tributary | Years |	Site | Configuration |
+|:----|:----|:----|:----|
+| Hood River	 | 12/13-21/22	 | Hood River Mouth (HRM)	 | Initial |
+| Fifteenmile Creek	 | 11/12-18/19	 | Fifteenmile Ck at Eighmile Ck (158)	| Initial |
+| Deschutes River	 | 13/14-18/19	 | Deschutes River Mouth (DRM)	| Initial |
+| John Day River	 | 12/13-21/22	 | John Day River, McDonald Ferry (JD1)	| Initial |
+| Umatilla River | 	06/07-13/14	 | Three Mile Falls Dam (TMF)	| Initial |
+| Umatilla River	 | 14/15-21/22	 | Three Mile Falls Dam (TMF)	| Antenna installation at entrance to adult ladder | 
+| Walla Walla River	 | 05/06-11/12	 | Oasis Road Bridge (ORB)	| Initial |
+| Walla Walla River	 | 12/13-14/15	 | Oasis Road Bridge (ORB) and Walla Walla R at Pierce RV Pk (PRV)	| Initial configuration where two mouth sites were operational simultaneously and their joint detection efficiency was estimated |
+| Walla Walla River	 | 15/16-18/19	 | Walla Walla R at Pierce RV Pk (PRV)	| Initial |
+| Walla Walla River	 | 19/20-21/22	 | Walla Walla River Barge Array (WWB)	| Initial |
+| Yakima River	 | 05/06-21/22	 | Prosser Diversion Dam (PRO)	| Initial |
+| Wenatchee River	 | 10/11-21/22	 | Lower Wenatchee River (LWE)	| Initial |
+| Entiat River	 | 07/08-21/22	 | Lower Entiat River (ENL)	| Initial |
+| Methow River	 | 09/10-16/17 | 	Lower Methow River at Pateros (LMR)	| Initial |
+| Methow River	 | 17/18-21/22 | 	Lower Methow River at Pateros (LMR) |	Site was moved 5 km upstream and transceivers replaced |
+| Okanogan River	 | 13/14-21/22 | 	Lower Okanogan Instream Array (OKL)	| Initial |
+| Tucannon River	 | 10/11-19/20 | 	Lower Tucannon River (LTR)	| Initial |
+| Tucannon River	 | 20/21-21/22 | 	Lower Tucannon River (LTR) |	All antennas replaced, additional antenna installed |
+| Asotin Creek	 | 11/12-17/18 | 	Asotin Creek Mouth (ACM)	| Initial |
+| Asotin Creek	 | 18/19-21/22 | 	Asotin Creek Mouth (ACM) | 	All components replaced and upgraded |
+| Imnaha River	 | 10/11-21/22 | 	Lower Imnaha River ISA @ km 7 (IR1)	| Initial |
+
+For our model of detection efficiency, we denote $z_i$ as the detection of fish $i$, $p_det$ as the probability of detection for fish $i$, $\alpha_{j,k}$ as the antenna configuration for tributary $j$ under configuration $k$, $\beta_j$ as the slope for the effect of discharge, and $x_{j,t}$ as the mean discharge for tributary $j$ in year $t$. The model for detection efficiency was as follows:
+
+$$
+z_i ∼ Bernoulli(p_{det,i}) \\
+logit(p_{det,i}) =\alpha_{j,k} + \beta_j x_{j,t}
+$$
+
+The above model was implemented in Stan (Carpenter et al., 2017), with 3 chains run for 5,000 warmup and 5,000 sampling iterations each. Discharge values were Z-scored prior to the model being fit. The posteriors from this model for each of the $\alpha$ (site configuration intercepts) and $\beta$ (effect of discharge) terms were used as priors in the primary Stan model that was used to estimate movement. The resulting detection efficiency correction for each run year can be found in Fig. S1.
+
+
+
+### Supplemental Methods 2: Covariate data processing
+
+#### Temperature data
+Due to the noise and gaps inherent to the temperature data, a series of steps were performed to clean this data. First, plots of temperature were manually inspected and sequential runs of temperature points that were outside of the range of possible values for that time of year were removed. Next, a filtering algorithm was applied to remove any temperature values that were more than four degrees outside of the interannual average temperature value for that day of the year, as well as any values that were more than two degrees outside of the 7-day moving average. To address the incomplete temporal resolution for temperature at each dam in our modeling framework, a state-space model was fit using the MARSS package (Holmes et al., 2014). The inputs for this model were the cleaned temperature data at the forebay and tailrace for the eight dams (a total of 16 temperature time series). The model was structured with only a single process (the basin-scale temperature) and 16 observations of that process. Each dam had a different offset/bias term (8 total). Model-estimated temperatures on each day for each dam were then exported by using the estimate of the basin-scale temperature plus the dam-specific offset.
+
+To estimate the temperatures experienced by fish, the median residence time in each state in our model was first calculated. To do so, we calculated the difference between the date on which a fish was observed exiting a state and the date on which a fish was observed entering a state, and then computed the state-specific median across all fish. However, for the two furthest upstream states (upstream of Lower Granite Dam and upstream of Wells Dam), residence times were significantly longer and were found to be bimodal. Based on our hypothesis that movement decisions are made soon after a fish enters a state, we fit a two-component mixture model using the mixtools package in R (Benaglia et al., 2010) to residence times in these states and used the median residence time for fish in the first mode. The mean temperature experienced by the fish while in a state was estimated as the mean temperature across a window of time defined as the date a fish was observed entering a state plus the median residence time for all fish in that state. 
+
+#### Spill data
+Daily average spill (in thousands of cubic feet per second) was queried from the Columbia Basin Conditions portal from the DART page for the eight dams that were modeled as the boundaries of states (Bonneville, McNary, Priest Rapids, Rock Island, Rocky Reach, Wells, Ice Harbor, and Lower Granite). Spill data were processed in two different ways to facilitate the inclusion of two hypothesized relationships between spill and fish fallback over dams. For en-route fallback, spill volume was processed in the same way as temperature: by taking the mean volume of spill across the residence time window. For post-overshoot fallback, spill volume was converted into days of winter spill, by counting the number of days that had nonzero spill in the months of January, February, and March for each year.
+
+
+## Supplemental Results
+
+### Table S1: Sample sizes
+```{r}
+# Step 1: Load the model_data files to ensure that we are pulling the exact same
+# data as what is going into the model
+load(here::here("Stan", "upper_columbia_wild", "UCW_model_data.rda"))
+UCW_data <- data
+load(here::here("Stan", "upper_columbia_hatchery", "UCH_model_data.rda"))
+UCH_data <- data
+load(here::here("Stan", "middle_columbia_wild", "MCW_model_data.rda"))
+MCW_data <- data
+load(here::here("Stan", "middle_columbia_hatchery", "MCH_model_data.rda"))
+MCH_data <- data
+load(here::here("Stan", "snake_river_wild", "SRW_model_data.rda"))
+SRW_data <- data
+load(here::here("Stan", "snake_river_hatchery", "SRH_model_data.rda"))
+SRH_data <- data
+
+# load some useful info
+# get the model states into a df, to help with interpretation
+model_states = c(
+  # Mainstem states (9)
+  "mainstem, mouth to BON",
+  "mainstem, BON to MCN",
+  "mainstem, MCN to ICH or PRA",
+  "mainstem, PRA to RIS",
+  "mainstem, RIS to RRE",
+  "mainstem, RRE to WEL",
+  "mainstem, upstream of WEL",
+  "mainstem, ICH to LGR",
+  "mainstem, upstream of LGR",
+  
+  # Tributary states ()
+  # With detection efficiencies in the model, we now have more tributary states,
+  # since we have an upstream and a river mouth state
+  
+  # "Deschutes River", 
+  "Deschutes River Mouth", "Deschutes River Upstream",
+  # "John Day River", 
+  "John Day River Mouth", "John Day River Upstream",
+  # "Hood River",
+  # "Hood River Mouth", "Hood River Upstream",
+  # "Fifteenmile Creek", 
+  "Fifteenmile Creek Mouth", "Fifteenmile Creek Upstream",
+  # "Umatilla River",
+  "Umatilla River Mouth", "Umatilla River Upstream",
+  # "Yakima River",
+  "Yakima River Mouth", "Yakima River Upstream",
+  # "Walla Walla River",
+  "Walla Walla River Mouth", "Walla Walla River Upstream",
+  # "Wenatchee River", 
+  "Wenatchee River Mouth", "Wenatchee River Upstream",
+  # "Entiat River", 
+  "Entiat River Mouth", "Entiat River Upstream",
+  # "Okanogan River", 
+  "Okanogan River Mouth", "Okanogan River Upstream",
+  # "Methow River", 
+  "Methow River Mouth", "Methow River Upstream",
+  # "Tucannon River",
+  "Tucannon River Mouth", "Tucannon River Upstream",
+  # "Asotin Creek", 
+  "Asotin Creek Mouth", "Asotin Creek Upstream",
+  "Clearwater River",
+  "Salmon River",
+  "Grande Ronde River",
+  # "Imnaha River",
+  "Imnaha River Mouth", "Imnaha River Upstream",
+  "BON to MCN other tributaries",
+  "Upstream WEL other tributaries",
+  
+  # Loss
+  "loss"
+)
+
+# Make the origin_param_map
+natal_origins <- gsub(" Mouth| Upstream", "", model_states)
+natal_origins <- natal_origins[!(duplicated(natal_origins))]
+natal_origins <- natal_origins[!(grepl("mainstem", natal_origins))]
+natal_origins <- natal_origins[!(grepl("other tributaries", natal_origins))]
+natal_origins <- natal_origins[!(natal_origins == "loss")]
+
+# Use the parameter map to index the right effects
+origin_param_map <- data.frame(
+  natal_origin = natal_origins,
+  hatchery = c(NA, NA, NA, 1, NA, 2, # MC
+               1,NA,2,3, # UC
+               5,NA,1,4,2,3), # SR,
+  wild = c(1,3,2,4,6,5, # MC
+           1,2,NA,3, # UC
+           6,1,2,5,3,4)) # SR
+
+# Add the DPS
+DPS_map <- data.frame(
+  natal_origin = c("Middle Columbia", "Upper Columbia", "Snake River"),
+  hatchery = rep(999, 3),
+  wild = rep(999, 3)
+)
+origin_param_map %>% 
+  bind_rows(DPS_map) -> origin_param_map
+
+
+
+
+# Step 2: Write a function that takes a dataset and returns a table
+# that contains each fish by origin and run year
+
+extract_run_year_origin <- function(data, rear, DPS, origin_param_map = origin_param_map){
+  origin_vector <- vector(length = nrow(data$cat_X_mat))
+  for(i in 1:nrow(data$cat_X_mat)){
+    origin_vector[i] <- which(data$cat_X_mat[i,]==1)
+  }
+  
+  
+  # for spill days - include the winter post-overshoot vector, which contains
+  # info on whether they could have experienced winter spill conditions or not
+  # add a new fish_ID column, which is not the same as tag code but will allow us to differentiate between fish
+  pop_states_run_years <- data.frame(fish_ID = rep(1:length(origin_vector), each = ncol(data$y)),
+                                     state = as.vector(t(data$y)),
+                                     origin = rep(origin_vector, each = ncol(data$y)))
+  
+  # drop observations in the loss state and with index 0
+  pop_states_run_years %>% 
+    filter(!(state %in% c(0,41))) -> pop_states_run_years
+  
+  # add the run year column
+  pop_states_run_years$run_year <- data$transition_run_years
+  
+  # keep only the first observation of each fish (this is when they are detected
+  # at BON, and therefore is their run year)
+  pop_states_run_years %>% 
+    filter(!(duplicated(fish_ID))) -> fish_state_origin_year
+  
+  # join with key to translate numeric origin into actual origin
+  if (DPS == "Middle Columbia") {
+    origin_param_map_DPS <- subset(origin_param_map, natal_origin %in% origin_param_map$natal_origin[1:6])
+  } else if (DPS == "Upper Columbia"){
+    origin_param_map_DPS <- subset(origin_param_map, natal_origin %in% origin_param_map$natal_origin[7:10])
+  } else{
+    origin_param_map_DPS <- subset(origin_param_map, natal_origin %in% origin_param_map$natal_origin[11:16])
+  }
+  
+  
+  if (rear == "hatchery"){
+    fish_state_origin_year %>% 
+      left_join(., dplyr::select(origin_param_map_DPS, natal_origin, hatchery), 
+                by = join_by(origin == hatchery)) -> fish_state_origin_year
+    
+    # Add a rear column
+    fish_state_origin_year %>% 
+      mutate(rear = "hatchery") -> fish_state_origin_year
+  } else {
+    fish_state_origin_year %>% 
+      left_join(., dplyr::select(origin_param_map_DPS, natal_origin, wild), 
+                by = join_by(origin == wild)) -> fish_state_origin_year
+    
+    # Add a rear column
+    fish_state_origin_year %>% 
+      mutate(rear = "natural") -> fish_state_origin_year
+  }
+  
+  
+  
+  return(fish_state_origin_year)
+  
+}
+
+UCW_origin_run_years <- extract_run_year_origin(data = UCW_data, rear = "natural", 
+                                                DPS = "Upper Columbia", origin_param_map = origin_param_map)
+UCH_origin_run_years <- extract_run_year_origin(data = UCH_data, rear = "hatchery", 
+                                                DPS = "Upper Columbia", origin_param_map = origin_param_map)
+MCW_origin_run_years <- extract_run_year_origin(data = MCW_data, rear = "natural", 
+                                                DPS = "Middle Columbia", origin_param_map = origin_param_map)
+MCH_origin_run_years <- extract_run_year_origin(data = MCH_data, rear = "hatchery", 
+                                                DPS = "Middle Columbia", origin_param_map = origin_param_map)
+SRW_origin_run_years <- extract_run_year_origin(data = SRW_data, rear = "natural", 
+                                                DPS = "Snake River", origin_param_map = origin_param_map)
+SRH_origin_run_years <- extract_run_year_origin(data = SRH_data, rear = "hatchery", 
+                                                DPS = "Snake River", origin_param_map = origin_param_map)
+
+UCW_origin_run_years %>% 
+  bind_rows(., UCH_origin_run_years) %>% 
+  bind_rows(., MCW_origin_run_years) %>% 
+  bind_rows(., MCH_origin_run_years) %>% 
+  bind_rows(., SRW_origin_run_years) %>% 
+  bind_rows(., SRH_origin_run_years) -> full_origin_run_years
+
+full_origin_run_years %>% 
+  group_by(natal_origin, run_year, rear) %>% 
+  summarise(count = n()) -> sample_size_long
+
+# Convert numeric run years to actual
+# first create the run year df
+# NOTE: There are two ways that we index run year numeric (not great.)
+# In the model, year 1 is 04/05; in other places where we are plotting run year,
+# we have a numeric run year column where 4 = 04/05, 5 = 05/06, etc.
+run_year <- c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24", "24/25")
+run_year_start <- seq(ymd_hms("2004-06-01 00:00:00"), ymd_hms("2024-06-01 00:00:00"), by = "years")
+run_year_end <- seq(ymd_hms("2005-05-31 23:59:59"), ymd_hms("2025-05-31 23:59:59"), by = "years")
+run_year_index = 1:21
+
+run_year_df <- data.frame(run_year, run_year_start, run_year_end, run_year_index)
+
+sample_size_long %>% 
+  dplyr::rename(run_year_index = run_year) %>% 
+  left_join(run_year_df, by = "run_year_index") %>% 
+  dplyr::select(-c(run_year_start, run_year_end)) -> sample_size_long
+
+# change order to be from most downstream to most upstream
+tributary_order <- c("Fifteenmile Creek", "Deschutes River", "John Day River",
+                     "Umatilla River", "Walla Walla River", "Yakima River", "Wenatchee River",
+                     "Entiat River", "Methow River", "Okanogan River",
+                     "Tucannon River", "Clearwater River", "Asotin Creek", "Grande Ronde River",
+                     "Salmon River", "Imnaha River")
+
+
+# reformat so that we can export this is a table
+sample_size_long %>% 
+  ungroup() %>% 
+  mutate(run_year = factor(run_year, levels = c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24", "24/25"))) %>% 
+  mutate(natal_origin = factor(natal_origin, levels = tributary_order)) %>% 
+  dplyr::select(-c(run_year_index)) %>% 
+  arrange(natal_origin, rear, run_year) %>% 
+  mutate(population = paste0(natal_origin, " (", ifelse(rear == "natural", "N", "H"), ")")) %>% 
+  dplyr::select(-c(natal_origin, rear)) %>% 
+  pivot_wider(names_from = run_year, values_from = count) %>% 
+  replace(is.na(.), 0) %>%
+  relocate(`05/06`, .after = population) %>% 
+  relocate(`06/07`, .after = `05/06`) %>% 
+  relocate(`07/08`, .after = `06/07`) %>% 
+  relocate(`23/24`, .after = `22/23`) %>% 
+  bind_rows(summarise(.,
+                      across(where(is.numeric), sum),
+                      across(where(is.character), ~"Total"))) %>% 
+  mutate(Total = rowSums(across(where(is.numeric))))  -> sample_size_table
+
+sample_size_table %>% 
+  kbl(caption = "The number of fish per run year from each combination of natal tributary and rearing type (natural or hatchery origin).") %>% 
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Missing: Okanogan H, Wenatchee H, Wenatchee N, Imnaha H, Imnaha N
+
+
+### Figure S1: Post-overshoot fallback timing
+
+
+### Figure S2: Spill vs. flow
+
+
+### Figure S3: Detection efficiency estimation
+
+
+### Figure S4: Model diagnostic figures
+
+
+### Figure S5: Deschutes River movement
+
+
+### Figure S6: Spill volume vs. fallback rates
+
+
+### Figure S7: Final fates, under median conditions
+
+
+### Figure S8: Modeling days of March spill only - different winter spill effects
+
+
