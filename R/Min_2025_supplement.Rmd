@@ -2,7 +2,10 @@
 title: "Supplemental Materials for Min et al. 2025"
 author: "Markus Min"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
 ---
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -305,17 +308,1391 @@ sample_size_long %>%
   mutate(Total = rowSums(across(where(is.numeric))))  -> sample_size_table
 
 sample_size_table %>% 
+  dplyr::rename("Population" = population) %>% 
   kbl(caption = "The number of fish per run year from each combination of natal tributary and rearing type (natural or hatchery origin).") %>% 
   kable_styling(latex_options = "HOLD_position")
 ```
 
-Missing: Okanogan H, Wenatchee H, Wenatchee N, Imnaha H, Imnaha N
+
+### 1 Post-overshoot fallback timing {.tabset .tabset-pills}
+
+These figures show the timing of observations of overshoot (first point) and first observation following post-overshoot fallback (second point) for each fish from a given population. Red points indicate terminal overshoot observations (where fish were not seen again below an overshoot dam following overshoot). Lines connecting overshoot observations with post-overshoot fallback observations indicate that time period in which a fallback event must have occurred. Dashed green lines indicate the winter months (January, February, and March) that were used to characterize the likely spill conditions encountered by fish in overshoot states. In our model, any fish that was last observed overshooting (red dots) or any fish where based on their detection history, may have fallen back during January, February, or March (any black lines that are at least partially between the two dashed green lines) are affected by the winter spill days covariate.
+
+```{r define_S1_functions}
+# add DPS info to origin_param_map
+origin_param_map$DPS <- c(rep("Middle Columbia", 6),
+                          rep("Upper Columbia", 4),
+                          rep("Snake River", 6),
+                          rep(NA, 3))
 
 
-### Figure S1: Post-overshoot fallback timing
+# Here, we need to plot when fish are arriving back in natal tributaries after overshoot
+
+# Define a function that extracts the data and formats it for a plot
+plot_overshoot_fallback_timing <- function(data, natal_origin_select, DPS_select, rear_select){
+  #### Create a large DF that notes which states are overshoot states ####
+  DES_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+  JDR_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+  FIF_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+  UMA_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+    YAK_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "mainstem, MCN to ICH or PRA", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "Yakima River Mouth",            
+                                          "Yakima River Upstream",
+                                          "Walla Walla River Mouth",
+                                          "Walla Walla River Upstream",
+                                          "loss"))]
+    
+    WAWA_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "mainstem, MCN to ICH or PRA", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "Yakima River Mouth",            
+                                          "Yakima River Upstream",
+                                          "Walla Walla River Mouth",
+                                          "Walla Walla River Upstream",
+                                          "loss"))]
+  
+  WEN_overshoot_states <- c("mainstem, RRE to WEL", "mainstem, upstream of WEL",
+                                         "Entiat River Mouth", "Entiat River Upstream",
+                                         "Methow River Mouth", "Methow River Upstream",
+                                         "Okanogan River Mouth", "Okanogan River Upstream",
+                                         "Upstream WEL other tributaries")
+  
+  ENT_overshoot_states <- c("mainstem, upstream of WEL",
+                                         "Methow River Mouth", "Methow River Upstream",
+                                         "Okanogan River Mouth", "Okanogan River Upstream",
+                                         "Upstream WEL other tributaries")
+  
+  TUC_overshoot_states <- c("mainstem, upstream of LGR",
+                            "Asotin Creek Mouth",
+                            "Asotin Creek Upstream",
+                            "Clearwater River",
+                            "Salmon River",
+                            "Grande Ronde River",
+                            "Imnaha River Mouth",
+                            "Imnaha River Upstream")
+  
+overshoot_states <- data.frame(natal_origin = c(rep("Deschutes River", length(DES_overshoot_states)),
+                                                rep("John Day River", length(JDR_overshoot_states)),
+                                                rep("Fifteenmile Creek", length(FIF_overshoot_states)),
+                                                rep("Umatilla River", length(UMA_overshoot_states)),
+                                                rep("Yakima River", length(YAK_overshoot_states)),
+                                                rep("Walla Walla River", length(WAWA_overshoot_states)),
+                                                rep("Wenatchee River", length(WEN_overshoot_states)),
+                                                rep("Entiat River", length(ENT_overshoot_states)),
+                                                rep("Tucannon River", length(TUC_overshoot_states))),
+                               state = c(DES_overshoot_states,
+                                         JDR_overshoot_states,
+                                         FIF_overshoot_states,
+                                         UMA_overshoot_states,
+                                         YAK_overshoot_states,
+                                         WAWA_overshoot_states,
+                                         WEN_overshoot_states,
+                                         ENT_overshoot_states,
+                                         TUC_overshoot_states))
+
+overshoot_states$state_number <- NA 
+
+for (i in 1:nrow(overshoot_states)){
+  overshoot_states$state_number[i] <- which(model_states == overshoot_states$state[i])
+}
+
+  #### reformat data ####
+  # get origin
+origin_vector <- vector(length = nrow(data$cat_X_mat))
+for(i in 1:nrow(data$cat_X_mat)){
+  origin_vector[i] <- which(data$cat_X_mat[i,]==1)
+}
+
+# get dates of state visits
+transition_dates <- as.data.frame(data$transition_dates)
+colnames(transition_dates) <- 1:ncol(transition_dates)
+# add origin info
+transition_dates$origin <- origin_vector
+transition_dates %>% 
+  mutate(fish_ID = row_number()) %>% 
+  pivot_longer(cols = -c(fish_ID, origin), names_to = "state_history", values_to = "model_date") -> transition_dates
+
+# add the actual dates
+dates_actual <- data.frame(date_actual = seq(ymd("2005-06-01"), ymd("2024-12-31"), by = "days"),
+                           model_date = 1:length(seq(ymd("2005-06-01"), ymd("2024-12-31"), by = "days")))
+dates_actual %>% 
+  mutate(month_day = format(as.Date(date_actual), "%m-%d")) -> dates_actual
+
+transition_dates %>% 
+  left_join(., dates_actual, by = "model_date") -> transition_dates
+
+# get state visits
+state_visits <- as.data.frame(data$y)
+colnames(state_visits) <- 1:ncol(state_visits)
+# add origin info
+state_visits$origin <- origin_vector
+
+state_visits %>% 
+  mutate(fish_ID = row_number()) %>% 
+  pivot_longer(cols = -c(fish_ID, origin), names_to = "state_history", values_to = "state") -> state_visits
+
+# join state visits with transition dates
+transition_dates$state <- state_visits$state
+
+# keep only actual data
+transition_dates %>% 
+  filter(state != 0) -> transition_histories
+
+# join with origin_param_map
+if(rear_select == "wild"){
+  transition_histories %>% 
+  left_join(filter(dplyr::select(origin_param_map, natal_origin, wild), 
+                   natal_origin %in% subset(origin_param_map, DPS == DPS_select)$natal_origin), 
+            join_by(origin==wild)) -> transition_histories
+} else{
+  transition_histories %>% 
+  left_join(filter(dplyr::select(origin_param_map, natal_origin, hatchery), 
+                   natal_origin %in% subset(origin_param_map, DPS == DPS_select)$natal_origin), 
+            join_by(origin==hatchery)) -> transition_histories
+}
+
+# Note when fish are in an overshoot state
+transition_histories %>%
+  mutate(overshoot = ifelse(natal_origin == natal_origin_select & state %in% subset(overshoot_states, natal_origin == natal_origin_select)$state_number,
+                            "overshoot", "not overshoot")) -> transition_histories
+  
+subset(transition_histories, natal_origin == natal_origin_select) -> origin_data
+
+origin_data %>% 
+  group_by(fish_ID) %>% 
+  filter(any(overshoot == "overshoot")) -> origin_overshoots
+
+# figure out what day overshoot begins, and what day it ends
+origin_overshoots %>% 
+  group_by(fish_ID) %>% 
+  filter(overshoot == "overshoot") %>% 
+  filter(!(duplicated(fish_ID))) -> origin_first_overshoot
+
+origin_overshoots %>% 
+  mutate(end_overshoot = ifelse(lag(overshoot) == "overshoot" & overshoot == "not overshoot", "end overshoot", "not end overshoot")) -> origin_overshoots
+
+origin_overshoots %>% 
+  filter(overshoot == "overshoot" | end_overshoot == "end overshoot") -> origin_overshoot_history
+
+# here, we need to pull when they were seen after falling back (first not overshoot state timing),
+# and when they were last seen previous to falling back (this is the last overshoot state where
+# the date isn't the same)
+origin_overshoot_history %>%
+  # this drops any overshoot states that are implicit movements (and therefore,
+  # the dates aren't useful)
+  filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
+           overshoot == "overshoot" & date_actual != lead(date_actual) |
+           overshoot == "overshoot" & lead(state) == 41) %>%
+  # this now keeps only the observation directly before the fallback detection
+    filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
+           overshoot == "overshoot" & lead(overshoot) == "not overshoot") -> origin_end_overshoot_history
+
+# make the dates revolve around the run_year
+origin_end_overshoot_history %>% 
+  mutate(plotting_year = ifelse(month(date_actual) < 6, 2000, 1999)) %>% 
+  mutate(plotting_date = ymd(paste0(plotting_year, "-", month_day))) -> origin_end_overshoot_history
+
+origin_end_overshoot_history$ID_new <- rep(1:(nrow(origin_end_overshoot_history)/2), each = 2)
+
+# figure out which fish we don't see again
+origin_end_overshoot_history %>% 
+  group_by(fish_ID) %>% 
+  filter(lead(state) == 41) -> origin_overshoot_loss
+
+origin_end_overshoot_history %>% 
+  group_by(fish_ID) %>% 
+  filter(lead(state) == 41 | state == 41) -> origin_overshoot_loss
+
+# add a fake date to indicate that we don't know when this could end
+origin_overshoot_loss %>% 
+  mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-05-31"), ymd(plotting_date))) -> origin_overshoot_loss
+
+overshoot_fallback_timing_plot <- ggplot(origin_end_overshoot_history, aes(x = plotting_date, y = ID_new)) +
+  geom_line(aes(group = ID_new), linewidth = 0.25) +
+  geom_point() +
+  geom_point(data = subset(origin_overshoot_loss, state != 41), aes(x = plotting_date, y = ID_new), color = "red") +
+  # geom_line(data = origin_overshoot_loss, aes(group = ID_new, x = plotting_date, y = ID_new), color = "red") +
+  geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
+  geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
+  coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), 
+                  ylim = c(0, max(origin_end_overshoot_history$ID_new)+1), expand = FALSE) +
+    xlab("Date") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+    theme(legend.position = "none",
+          panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+  ggtitle(paste0(natal_origin_select, ", ", ifelse(rear_select == "wild", "natural", rear_select)))
+
+return(overshoot_fallback_timing_plot)
+
+# origin_end_overshoot_history %>% 
+#   mutate(movement = ifelse(overshoot == "overshoot", "overshoot",
+#                            ifelse(overshoot == "not overshoot", "fallback", NA))) %>% 
+#   mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-07-01"), plotting_date)) -> fallback_overshoot_count_data
+# 
+# 
+# overshoot_fallback_timing_histogram <- ggplot(fallback_overshoot_count_data, aes(x = plotting_date, fill = movement)) +
+#   geom_histogram() +
+#   geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
+#   geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
+#   coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-07-31")), 
+#                   expand = FALSE) +
+#     xlab("Date") +
+#   # scale_x_date(date_breaks = "1 month") +
+#   # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+#   scale_x_date(date_breaks = "1 month", labels = c("Jun", "Jul", "Aug", "Sep",
+#                                                    "Oct", "Nov", "Dec", "Jan",
+#                                                    "Feb", "Mar", "Apr", "May",
+#                                                    "Jun", "NA", "NA")) +
+#     theme(panel.grid.major = element_line(color = "gray90"),
+#           panel.background = element_rect(fill = "white", color = "black"),
+#           panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+#           plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+#   ggtitle(paste0(natal_origin_select, ", ", rear_select))
+
+# return(list(overshoot_fallback_timing_plot, overshoot_fallback_timing_histogram))
+}
+```
 
 
-### Figure S2: Spill vs. flow
+```{r generate_S1, fig.dim = c(6,12)}
+DES_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Deschutes River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+JDR_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "John Day River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+FIF_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Fifteenmile Creek", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+UMA_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Umatilla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+UMA_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCH_data, 
+                               natal_origin_select = "Umatilla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "hatchery")
+
+YAK_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Yakima River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+WAWA_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Walla Walla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+WAWA_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCH_data, 
+                               natal_origin_select = "Walla Walla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "hatchery")
+
+ENT_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCW_data, 
+                               natal_origin_select = "Entiat River", 
+                               DPS_select = "Upper Columbia", 
+                               rear_select = "wild")
+
+WEN_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCW_data, 
+                               natal_origin_select = "Wenatchee River", 
+                               DPS_select = "Upper Columbia", 
+                               rear_select = "wild")
+
+WEN_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCH_data, 
+                               natal_origin_select = "Wenatchee River", 
+                               DPS_select = "Upper Columbia", 
+                               rear_select = "hatchery")
+
+TUC_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SRW_data, 
+                               natal_origin_select = "Tucannon River", 
+                               DPS_select = "Snake River", 
+                               rear_select = "wild")
+
+TUC_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SRH_data, 
+                               natal_origin_select = "Tucannon River", 
+                               DPS_select = "Snake River", 
+                               rear_select = "hatchery")
+```
+
+#### Deschutes (N)
+```{r fig.dim = c(6,10)}
+DES_W_overshoot_fallback_timing_plot
+```
+
+#### John Day (N)
+```{r fig.dim = c(6,10)}
+JDR_W_overshoot_fallback_timing_plot
+```
+
+#### Fifteenmile (N)
+```{r fig.dim = c(6,10)}
+FIF_W_overshoot_fallback_timing_plot
+```
+
+#### Umatilla (N)
+```{r fig.dim = c(6,10)}
+UMA_W_overshoot_fallback_timing_plot
+```
+
+#### Umatilla (H)
+```{r fig.dim = c(6,10)}
+UMA_H_overshoot_fallback_timing_plot
+```
+
+#### Yakima (N)
+```{r fig.dim = c(6,10)}
+YAK_W_overshoot_fallback_timing_plot
+```
+
+#### Walla Walla (N)
+```{r fig.dim = c(6,10)}
+WAWA_W_overshoot_fallback_timing_plot
+```
+
+#### Walla Walla (H)
+```{r fig.dim = c(6,10)}
+WAWA_H_overshoot_fallback_timing_plot
+```
+
+#### Entiat (N)
+```{r fig.dim = c(6,10)}
+ENT_W_overshoot_fallback_timing_plot
+```
+
+#### Wenatchee (N)
+```{r fig.dim = c(6,10)}
+WEN_W_overshoot_fallback_timing_plot
+```
+
+#### Wenatchee (H)
+```{r fig.dim = c(6,10)}
+WEN_H_overshoot_fallback_timing_plot
+```
+
+#### Tucannon (N)
+```{r fig.dim = c(6,10)}
+TUC_W_overshoot_fallback_timing_plot
+```
+
+#### Tucannon (H)
+```{r fig.dim = c(6,10)}
+TUC_H_overshoot_fallback_timing_plot
+```
+
+
+
+
+
+
+### 2 Covariate correlations {.tabset .tabset-pills}
+
+```{r}
+#### Define functions ####
+flow_reformat <- function(input_data, variable_name){
+  
+  # need to deal with leap years
+  leap_years <- seq(1960, 2024, by = 4)
+  
+  input_data %>% 
+    pivot_longer(., cols = colnames(.)[2:ncol(.)]) %>% 
+    dplyr::rename(year = name,
+                  !!quo_name(variable_name) := value) %>% 
+    mutate(year = gsub("X","",year)) %>% 
+    mutate(year = as.numeric(year), day = as.numeric(day)) %>% 
+    # drop day 366 in non-leap years
+    dplyr::filter(!(day == 366 & !(year %in% leap_years))) %>%
+    # Add a new column for date (combine year and day)
+    mutate(date = format(as.Date(day, origin = paste0(year-1, "-12-31")))) %>% 
+    arrange(year, day) %>% 
+    # don't include 2025 data
+    filter(year <= 2024) -> output_data
+  
+  return(output_data)
+}
+
+
+spill_reformat <- function(input_data, variable_name){
+  
+  # need to deal with leap years
+  leap_years <- seq(1960, 2024, by = 4)
+  
+  input_data %>% 
+    pivot_longer(., cols = colnames(.)[2:ncol(.)]) %>% 
+    dplyr::rename(year = name,
+                  !!quo_name(variable_name) := value) %>% 
+    mutate(year = gsub("X","",year)) %>% 
+    # mutate(spill = spill/100) %>% 
+    mutate(year = as.numeric(year), day = as.numeric(day)) %>% 
+    # drop day 366 in non-leap years
+    dplyr::filter(!(day == 366 & !(year %in% leap_years))) %>%
+    # Add a new column for date (combine year and day)
+    mutate(date = format(as.Date(day, origin = paste0(year-1, "-12-31")))) %>% 
+    arrange(year, day) %>% 
+    # don't include 2025 data
+    filter(year <= 2024) -> output_data
+  
+  return(output_data)
+}
+
+cov_reformat <- function(input_data, variable_name){
+  
+  # need to deal with leap years
+  leap_years <- seq(1960, 2024, by = 4)
+  
+  input_data %>% 
+    pivot_longer(., cols = colnames(.)[2:ncol(.)]) %>% 
+    dplyr::rename(year = name,
+                  !!quo_name(variable_name) := value) %>% 
+    mutate(year = gsub("X","",year)) %>% 
+    mutate(year = as.numeric(year), day = as.numeric(day)) %>% 
+    # drop day 366 in non-leap years
+    dplyr::filter(!(day == 366 & !(year %in% leap_years))) %>%
+    # Add a new column for date (combine year and day)
+    mutate(date = format(as.Date(day, origin = paste0(year-1, "-12-31")))) %>% 
+    arrange(year, day) %>% 
+    # drop all years before 2005
+    filter(year >= 2005) -> output_data
+  
+  
+  return(output_data)
+}
+
+
+
+#### Load and reformat the temperature data ####
+
+# load model estimated temperature
+temp_model_est <- read.csv(here::here("Data", "covariate_data", "temp_processed", "temp_mod_est.csv"))
+
+# BON
+BON_temp_mod <- dplyr::select(temp_model_est, date, BON) %>% 
+  dplyr::rename(temp = BON)
+BON_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "BON", "BON_tailrace_temp_2025-02-03.csv"))[1:366,]
+BON_temp_t_long <- cov_reformat(input_data = BON_temp_t, variable_name = "temp")
+BON_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "BON", "BON_temp_2025-02-03.csv"))[1:366,]
+BON_temp_f_long <- cov_reformat(input_data = BON_temp_f, variable_name = "temp")
+
+# ICH
+ICH_temp_mod <- dplyr::select(temp_model_est, date, ICH) %>% 
+  dplyr::rename(temp = ICH) 
+ICH_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "ICH", "ICH_tailrace_temp_2025-02-03.csv"))[1:366,]
+ICH_temp_t_long <- cov_reformat(input_data = ICH_temp_t, variable_name = "temp")
+ICH_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "ICH", "ICH_temp_2025-02-03.csv"))[1:366,]
+ICH_temp_f_long <- cov_reformat(input_data = ICH_temp_f, variable_name = "temp")
+
+# LGR
+LGR_temp_mod <- dplyr::select(temp_model_est, date, LGR) %>% 
+  dplyr::rename(temp = LGR) 
+LGR_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "LGR", "LGR_tailrace_temp_2025-02-03.csv"))[1:366,]
+LGR_temp_t_long <- cov_reformat(input_data = LGR_temp_t, variable_name = "temp")
+LGR_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "LGR", "LGR_temp_2025-02-03.csv"))[1:366,]
+LGR_temp_f_long <- cov_reformat(input_data = LGR_temp_f, variable_name = "temp")
+
+# MCN
+MCN_temp_mod <- dplyr::select(temp_model_est, date, MCN) %>% 
+  dplyr::rename(temp = MCN)
+MCN_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "MCN", "MCN_tailrace_temp_2025-02-03.csv"))[1:366,]
+MCN_temp_t_long <- cov_reformat(input_data = MCN_temp_t, variable_name = "temp")
+MCN_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "MCN", "MCN_temp_2025-02-03.csv"))[1:366,]
+MCN_temp_f_long <- cov_reformat(input_data = MCN_temp_f, variable_name = "temp")
+
+
+# PRA
+PRA_temp_mod <- dplyr::select(temp_model_est, date, PRA) %>% 
+  dplyr::rename(temp = PRA) 
+PRA_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "PRA", "PRA_tailrace_temp_2025-02-03.csv"))[1:366,]
+PRA_temp_t_long <- cov_reformat(input_data = PRA_temp_t, variable_name = "temp")
+PRA_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "PRA", "PRA_temp_2025-02-03.csv"))[1:366,]
+PRA_temp_f_long <- cov_reformat(input_data = PRA_temp_f, variable_name = "temp")
+
+
+# RIS
+RIS_temp_mod <- dplyr::select(temp_model_est, date, RIS) %>% 
+  dplyr::rename(temp = RIS) 
+RIS_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RIS", "RIS_tailrace_temp_2025-02-03.csv"))[1:366,]
+RIS_temp_t_long <- cov_reformat(input_data = RIS_temp_t, variable_name = "temp")
+RIS_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RIS", "RIS_temp_2025-02-03.csv"))[1:366,]
+RIS_temp_f_long <- cov_reformat(input_data = RIS_temp_f, variable_name = "temp")
+
+
+# RRE
+RRE_temp_mod <- dplyr::select(temp_model_est, date, RRE) %>% 
+  dplyr::rename(temp = RRE)  
+RRE_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RRE", "RRE_tailrace_temp_2025-02-03.csv"))[1:366,]
+RRE_temp_t_long <- cov_reformat(input_data = RRE_temp_t, variable_name = "temp")
+RRE_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RRE", "RRE_temp_2025-02-03.csv"))[1:366,]
+RRE_temp_f_long <- cov_reformat(input_data = RRE_temp_f, variable_name = "temp")
+
+# WEL
+WEL_temp_mod <- dplyr::select(temp_model_est, date, WEL) %>% 
+  dplyr::rename(temp = WEL)  
+WEL_temp_t <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "WEL", "WEL_tailrace_temp_2025-02-03.csv"))[1:366,]
+WEL_temp_t_long <- cov_reformat(input_data = WEL_temp_t, variable_name = "temp")
+WEL_temp_f <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "WEL", "WEL_temp_2025-02-03.csv"))[1:366,]
+WEL_temp_f_long <- cov_reformat(input_data = WEL_temp_f, variable_name = "temp")
+
+#### Load and reformat the spill data ####
+
+# BON
+BON_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "BON", "BON_spill_2025-02-03.csv"))[1:366,]
+BON_spill_long <- spill_reformat(input_data = BON_spill, variable_name = "spill")
+
+# ICH
+ICH_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "ICH", "ICH_spill_2025-02-03.csv"))[1:366,]
+ICH_spill_long <- spill_reformat(input_data = ICH_spill, variable_name = "spill")
+
+# LGR
+LGR_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "LGR", "LGR_spill_2025-02-03.csv"))[1:366,]
+LGR_spill_long <- spill_reformat(input_data = LGR_spill, variable_name = "spill")
+
+# MCN
+MCN_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "MCN", "MCN_spill_2025-02-03.csv"))[1:366,]
+MCN_spill_long <- spill_reformat(input_data = MCN_spill, variable_name = "spill")
+
+# PRA
+PRA_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "PRA", "PRA_spill_2025-02-03.csv"))[1:366,]
+PRA_spill_long <- spill_reformat(input_data = PRA_spill, variable_name = "spill")
+
+# RIS
+RIS_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RIS", "RIS_spill_2025-02-03.csv"))[1:366,]
+RIS_spill_long <- spill_reformat(input_data = RIS_spill, variable_name = "spill")
+
+# RRE
+RRE_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RRE", "RRE_spill_2025-02-03.csv"))[1:366,]
+RRE_spill_long <- spill_reformat(input_data = RRE_spill, variable_name = "spill")
+
+# WEL
+WEL_spill <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "WEL", "WEL_spill_2025-02-03.csv"))[1:366,]
+WEL_spill_long <- spill_reformat(input_data = WEL_spill, variable_name = "spill")
+
+# so, some gaps in WEL spill data, on Jan 1 and 2 2020, and in December 2021.
+# I think it's safe to assume that these are zero, especially looking at typical spill during these months
+# let's look at that data
+# ggplot(filter(WEL_spill_long, year %in% c(2020, 2021)), aes(x = ymd(date), y = spill)) + geom_point()
+# yeah, most likely zeros. will interpolate as such
+
+WEL_spill_long %>% 
+  mutate(spill = ifelse(is.na(spill) & year < 2023, 0, spill)) -> WEL_spill_long
+
+
+#### Load and reformat the flow data ####
+
+# BON
+BON_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "BON", "BON_flow_2025-02-03.csv"))[1:366,]
+BON_flow_long <- flow_reformat(input_data = BON_flow, variable_name = "flow")
+
+# ICH
+ICH_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "ICH", "ICH_flow_2025-02-03.csv"))[1:366,]
+ICH_flow_long <- flow_reformat(input_data = ICH_flow, variable_name = "flow")
+
+# LGR
+LGR_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "LGR", "LGR_flow_2025-02-03.csv"))[1:366,]
+LGR_flow_long <- flow_reformat(input_data = LGR_flow, variable_name = "flow")
+
+# MCN
+MCN_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "MCN", "MCN_flow_2025-02-03.csv"))[1:366,]
+MCN_flow_long <- flow_reformat(input_data = MCN_flow, variable_name = "flow")
+
+# PRA
+PRA_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "PRA", "PRA_flow_2025-02-03.csv"))[1:366,]
+PRA_flow_long <- flow_reformat(input_data = PRA_flow, variable_name = "flow")
+
+# RIS
+RIS_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RIS", "RIS_flow_2025-02-03.csv"))[1:366,]
+RIS_flow_long <- flow_reformat(input_data = RIS_flow, variable_name = "flow")
+
+# RRE
+RRE_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "RRE", "RRE_flow_2025-02-03.csv"))[1:366,]
+RRE_flow_long <- flow_reformat(input_data = RRE_flow, variable_name = "flow")
+
+# WEL
+WEL_flow <- read.csv(here::here("Data", "covariate_data", "CBR_DART", "WEL", "WEL_flow_2025-02-03.csv"))[1:366,]
+WEL_flow_long <- flow_reformat(input_data = WEL_flow, variable_name = "flow")
+
+#### Join temperature, flow, and spill data ####
+
+# create run year df
+run_year <- c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+              "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24", "24/25")
+run_year_start <- seq(ymd_hms("2004-06-01 00:00:00"), ymd_hms("2024-06-01 00:00:00"), by = "years")
+run_year_end <- seq(ymd_hms("2005-05-31 23:59:59"), ymd_hms("2025-05-31 23:59:59"), by = "years")
+run_year_numeric = seq(4, 24, 1)
+
+run_year_df <- data.frame(run_year, run_year_start, run_year_end, run_year_numeric)
+
+# Here we will use the forebay temperature, because there's less missing data (although it doesn't actually matter that much)
+BON_temp_mod %>% 
+  left_join(dplyr::select(BON_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(BON_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> BON_cov
+
+MCN_temp_mod %>% 
+  left_join(dplyr::select(MCN_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(MCN_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> MCN_cov
+
+PRA_temp_mod %>% 
+  left_join(dplyr::select(PRA_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(PRA_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> PRA_cov
+
+RIS_temp_mod %>% 
+  left_join(dplyr::select(RIS_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(RIS_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> RIS_cov
+
+RRE_temp_mod %>% 
+  left_join(dplyr::select(RRE_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(RRE_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> RRE_cov
+
+WEL_temp_mod %>% 
+  left_join(dplyr::select(WEL_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(WEL_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> WEL_cov
+
+ICH_temp_mod %>% 
+  left_join(dplyr::select(ICH_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(ICH_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> ICH_cov
+
+LGR_temp_mod %>% 
+  left_join(dplyr::select(LGR_spill_long, spill, date), by = "date") %>% 
+  left_join(dplyr::select(LGR_flow_long, flow, date), by = "date") %>% 
+  mutate(date = ymd(date)) %>% 
+  rowwise() %>%
+  dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> LGR_cov
+
+
+
+
+
+#### Plot relationships ####
+plot_spill_v_flow <- function(data, dam){
+  plot <- ggplot(data, aes(x = flow, y = spill)) +
+    geom_point() +
+      theme(legend.position = "none",
+          panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+    ylab("Spill (kcfs)") +
+    xlab("Flow (kcfs)") +
+    ggtitle(dam)
+  
+  return(plot)
+}
+
+plot_spill_v_temp <- function(data, dam){
+  plot <- ggplot(data, aes(x = temp, y = spill)) +
+    geom_point() +
+      theme(legend.position = "none",
+          panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+    ylab("Spill (kcfs)") +
+    xlab(expression(~"Temperature" ~ ("°C"))) +
+    ggtitle(dam)
+  
+  return(plot)
+}
+
+```
+
+#### All dams
+```{r}
+alldams_flow_spill_corr_table <- data.frame(Dam = c("Bonneville Dam", "McNary Dam", "Priest Rapids Dam", "Rock Island Dam",
+                                                     "Rocky Reach Dam", "Wells Dam", "Ice Harbor Dam", "Lower Granite Dam"), 
+                                            mean_flow = rep(NA, 8), mean_spill = rep(NA, 8))
+
+# Bonneville Dam
+BON_spill_flow_lm <- lm(spill~flow, data = BON_cov)
+BON_spill_flow_lm_sum <- summary(BON_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[1] <- mean(BON_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[1] <- mean(BON_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[1] <- round(BON_spill_flow_lm_sum$adj.r.squared,2)
+
+# McNary Dam
+MCN_spill_flow_lm <- lm(spill~flow, data = MCN_cov)
+MCN_spill_flow_lm_sum <- summary(MCN_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[2] <- mean(MCN_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[2] <- mean(MCN_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[2] <- round(MCN_spill_flow_lm_sum$adj.r.squared,2)
+
+# Priest Rapids Dam
+PRA_spill_flow_lm <- lm(spill~flow, data = PRA_cov)
+PRA_spill_flow_lm_sum <- summary(PRA_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[3] <- mean(PRA_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[3] <- mean(PRA_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[3] <- round(PRA_spill_flow_lm_sum$adj.r.squared,2)
+
+# Rock Island Dam
+RIS_spill_flow_lm <- lm(spill~flow, data = RIS_cov)
+RIS_spill_flow_lm_sum <- summary(RIS_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[4] <- mean(RIS_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[4] <- mean(RIS_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[4] <- round(RIS_spill_flow_lm_sum$adj.r.squared,2)
+
+# Rocky Reach Dam
+RRE_spill_flow_lm <- lm(spill~flow, data = RRE_cov)
+RRE_spill_flow_lm_sum <- summary(RRE_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[5] <- mean(RRE_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[5] <- mean(RRE_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[5] <- round(RRE_spill_flow_lm_sum$adj.r.squared,2)
+
+# Wells Dam
+WEL_spill_flow_lm <- lm(spill~flow, data = WEL_cov)
+WEL_spill_flow_lm_sum <- summary(WEL_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[6] <- mean(WEL_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[6] <- mean(WEL_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[6] <- round(WEL_spill_flow_lm_sum$adj.r.squared,2)
+
+# Ice Harbor Dam
+ICH_spill_flow_lm <- lm(spill~flow, data = ICH_cov)
+ICH_spill_flow_lm_sum <- summary(ICH_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[7] <- mean(ICH_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[7] <- mean(ICH_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[7] <- round(ICH_spill_flow_lm_sum$adj.r.squared,2)
+
+# Lower Granite Dam
+LGR_spill_flow_lm <- lm(spill~flow, data = LGR_cov)
+LGR_spill_flow_lm_sum <- summary(LGR_spill_flow_lm)
+
+alldams_flow_spill_corr_table$mean_flow[8] <- mean(LGR_cov$flow)
+alldams_flow_spill_corr_table$mean_spill[8] <- mean(LGR_cov$spill)
+alldams_flow_spill_corr_table$`R-squared`[8] <- round(LGR_spill_flow_lm_sum$adj.r.squared,2)
+
+alldams_flow_spill_corr_table %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill) %>% 
+  kbl(caption = "Correlation between spill and flow across all run years in the dataset, by dam.") %>% 
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r}
+alldams_temp_spill_corr_table <- data.frame(Dam = c("Bonneville Dam", "McNary Dam", "Priest Rapids Dam", "Rock Island Dam",
+                                                    "Rocky Reach Dam", "Wells Dam", "Ice Harbor Dam", "Lower Granite Dam"), 
+                                            mean_temp = rep(NA, 8), mean_spill = rep(NA, 8))
+
+# Bonneville Dam
+BON_spill_temp_lm <- lm(spill~temp, data = BON_cov)
+BON_spill_temp_lm_sum <- summary(BON_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[1] <- mean(BON_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[1] <- mean(BON_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[1] <- round(BON_spill_temp_lm_sum$adj.r.squared,2)
+
+# McNary Dam
+MCN_spill_temp_lm <- lm(spill~temp, data = MCN_cov)
+MCN_spill_temp_lm_sum <- summary(MCN_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[2] <- mean(MCN_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[2] <- mean(MCN_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[2] <- round(MCN_spill_temp_lm_sum$adj.r.squared,2)
+
+# Priest Rapids Dam
+PRA_spill_temp_lm <- lm(spill~temp, data = PRA_cov)
+PRA_spill_temp_lm_sum <- summary(PRA_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[3] <- mean(PRA_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[3] <- mean(PRA_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[3] <- round(PRA_spill_temp_lm_sum$adj.r.squared,2)
+
+# Rock Island Dam
+RIS_spill_temp_lm <- lm(spill~temp, data = RIS_cov)
+RIS_spill_temp_lm_sum <- summary(RIS_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[4] <- mean(RIS_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[4] <- mean(RIS_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[4] <- round(RIS_spill_temp_lm_sum$adj.r.squared,2)
+
+# Rocky Reach Dam
+RRE_spill_temp_lm <- lm(spill~temp, data = RRE_cov)
+RRE_spill_temp_lm_sum <- summary(RRE_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[5] <- mean(RRE_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[5] <- mean(RRE_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[5] <- round(RRE_spill_temp_lm_sum$adj.r.squared,2)
+
+# Wells Dam
+WEL_spill_temp_lm <- lm(spill~temp, data = WEL_cov)
+WEL_spill_temp_lm_sum <- summary(WEL_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[6] <- mean(WEL_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[6] <- mean(WEL_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[6] <- round(WEL_spill_temp_lm_sum$adj.r.squared,2)
+
+# Ice Harbor Dam
+ICH_spill_temp_lm <- lm(spill~temp, data = ICH_cov)
+ICH_spill_temp_lm_sum <- summary(ICH_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[7] <- mean(ICH_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[7] <- mean(ICH_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[7] <- round(ICH_spill_temp_lm_sum$adj.r.squared,2)
+
+# Lower Granite Dam
+LGR_spill_temp_lm <- lm(spill~temp, data = LGR_cov)
+LGR_spill_temp_lm_sum <- summary(LGR_spill_temp_lm)
+
+alldams_temp_spill_corr_table$mean_temp[8] <- mean(LGR_cov$temp)
+alldams_temp_spill_corr_table$mean_spill[8] <- mean(LGR_cov$spill)
+alldams_temp_spill_corr_table$`R-squared`[8] <- round(LGR_spill_temp_lm_sum$adj.r.squared,2)
+
+alldams_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean temp" = mean_temp,
+                "Mean Spill" = mean_spill) %>% 
+  kbl(caption = "Correlation between spill and temperature across all run years in the dataset, by dam.") %>% 
+  kable_styling(latex_options = "HOLD_position")
+```
+
+
+
+#### Bonneville Dam
+
+```{r}
+plot_spill_v_flow(data = BON_cov, dam = "Bonneville Dam")
+plot_spill_v_temp(data = BON_cov, dam = "Bonneville Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+              "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Bonnneville Dam
+BON_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(BON_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # BON_cov_corr_table$covariate_1[i] <- "Flow"
+  # BON_cov_corr_table$covariate_2[i] <- "Spill"
+  BON_flow_spill_corr_table$mean_flow[i] <- mean(subset(BON_cov, run_year == run_years[i])$flow)
+  BON_flow_spill_corr_table$mean_spill[i] <- mean(subset(BON_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  BON_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+BON_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(BON_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # BON_cov_corr_table$covariate_1[i] <- "Flow"
+  # BON_cov_corr_table$covariate_2[i] <- "Spill"
+  BON_temp_spill_corr_table$mean_temp[i] <- mean(subset(BON_cov, run_year == run_years[i])$temp)
+  BON_temp_spill_corr_table$mean_spill[i] <- mean(subset(BON_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  BON_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+BON_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Bonneville Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+BON_temp_spill_corr_table %>% 
+    mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Bonneville Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### McNary Dam
+
+```{r}
+plot_spill_v_flow(data = MCN_cov, dam = "McNary Dam")
+plot_spill_v_temp(data = MCN_cov, dam = "McNary Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## McNary Dam
+MCN_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(MCN_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # MCN_cov_corr_table$covariate_1[i] <- "Flow"
+  # MCN_cov_corr_table$covariate_2[i] <- "Spill"
+  MCN_flow_spill_corr_table$mean_flow[i] <- mean(subset(MCN_cov, run_year == run_years[i])$flow)
+  MCN_flow_spill_corr_table$mean_spill[i] <- mean(subset(MCN_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  MCN_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+MCN_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(MCN_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # MCN_cov_corr_table$covariate_1[i] <- "Flow"
+  # MCN_cov_corr_table$covariate_2[i] <- "Spill"
+  MCN_temp_spill_corr_table$mean_temp[i] <- mean(subset(MCN_cov, run_year == run_years[i])$temp)
+  MCN_temp_spill_corr_table$mean_spill[i] <- mean(subset(MCN_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  MCN_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+MCN_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for McNary Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+MCN_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for McNary Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### Priest Rapids Dam
+
+```{r}
+plot_spill_v_flow(data = PRA_cov, dam = "Priest Rapids Dam")
+plot_spill_v_temp(data = PRA_cov, dam = "Priest Rapids Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Priest Rapids Dam
+PRA_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(PRA_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # PRA_cov_corr_table$covariate_1[i] <- "Flow"
+  # PRA_cov_corr_table$covariate_2[i] <- "Spill"
+  PRA_flow_spill_corr_table$mean_flow[i] <- mean(subset(PRA_cov, run_year == run_years[i])$flow)
+  PRA_flow_spill_corr_table$mean_spill[i] <- mean(subset(PRA_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  PRA_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+PRA_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(PRA_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # PRA_cov_corr_table$covariate_1[i] <- "Flow"
+  # PRA_cov_corr_table$covariate_2[i] <- "Spill"
+  PRA_temp_spill_corr_table$mean_temp[i] <- mean(subset(PRA_cov, run_year == run_years[i])$temp)
+  PRA_temp_spill_corr_table$mean_spill[i] <- mean(subset(PRA_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  PRA_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+PRA_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Priest Rapids Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+PRA_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Priest Rapids Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### Rock Island Dam
+
+```{r}
+plot_spill_v_flow(data = RIS_cov, dam = "Rock Island Dam")
+plot_spill_v_temp(data = RIS_cov, dam = "Rock Island Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Rock Island Dam
+RIS_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(RIS_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # RIS_cov_corr_table$covariate_1[i] <- "Flow"
+  # RIS_cov_corr_table$covariate_2[i] <- "Spill"
+  RIS_flow_spill_corr_table$mean_flow[i] <- mean(subset(RIS_cov, run_year == run_years[i])$flow)
+  RIS_flow_spill_corr_table$mean_spill[i] <- mean(subset(RIS_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  RIS_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+RIS_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(RIS_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # RIS_cov_corr_table$covariate_1[i] <- "Flow"
+  # RIS_cov_corr_table$covariate_2[i] <- "Spill"
+  RIS_temp_spill_corr_table$mean_temp[i] <- mean(subset(RIS_cov, run_year == run_years[i])$temp)
+  RIS_temp_spill_corr_table$mean_spill[i] <- mean(subset(RIS_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  RIS_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+RIS_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Rock Island Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+RIS_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Rock Island Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### Rocky Reach Dam
+
+```{r}
+plot_spill_v_flow(data = RRE_cov, dam = "Rocky Reach Dam")
+plot_spill_v_temp(data = RRE_cov, dam = "Rocky Reach Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Rocky Reach Dam
+RRE_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(RRE_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # RRE_cov_corr_table$covariate_1[i] <- "Flow"
+  # RRE_cov_corr_table$covariate_2[i] <- "Spill"
+  RRE_flow_spill_corr_table$mean_flow[i] <- mean(subset(RRE_cov, run_year == run_years[i])$flow)
+  RRE_flow_spill_corr_table$mean_spill[i] <- mean(subset(RRE_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  RRE_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+RRE_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(RRE_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # RRE_cov_corr_table$covariate_1[i] <- "Flow"
+  # RRE_cov_corr_table$covariate_2[i] <- "Spill"
+  RRE_temp_spill_corr_table$mean_temp[i] <- mean(subset(RRE_cov, run_year == run_years[i])$temp)
+  RRE_temp_spill_corr_table$mean_spill[i] <- mean(subset(RRE_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  RRE_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+RRE_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Rocky Reach Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+RRE_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Rocky Reach Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### Wells Dam
+
+```{r}
+plot_spill_v_flow(data = WEL_cov, dam = "Wells Dam")
+plot_spill_v_temp(data = WEL_cov, dam = "Wells Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Wells Dam
+WEL_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(WEL_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # WEL_cov_corr_table$covariate_1[i] <- "Flow"
+  # WEL_cov_corr_table$covariate_2[i] <- "Spill"
+  WEL_flow_spill_corr_table$mean_flow[i] <- mean(subset(WEL_cov, run_year == run_years[i])$flow)
+  WEL_flow_spill_corr_table$mean_spill[i] <- mean(subset(WEL_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  WEL_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+WEL_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(WEL_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # WEL_cov_corr_table$covariate_1[i] <- "Flow"
+  # WEL_cov_corr_table$covariate_2[i] <- "Spill"
+  WEL_temp_spill_corr_table$mean_temp[i] <- mean(subset(WEL_cov, run_year == run_years[i])$temp)
+  WEL_temp_spill_corr_table$mean_spill[i] <- mean(subset(WEL_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  WEL_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+WEL_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Wells Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+WEL_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Wells Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### Ice Harbor Dam
+
+```{r}
+plot_spill_v_flow(data = ICH_cov, dam = "Ice Harbor Dam")
+plot_spill_v_temp(data = ICH_cov, dam = "Ice Harbor Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Ice Harbor Dam
+ICH_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(ICH_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # ICH_cov_corr_table$covariate_1[i] <- "Flow"
+  # ICH_cov_corr_table$covariate_2[i] <- "Spill"
+  ICH_flow_spill_corr_table$mean_flow[i] <- mean(subset(ICH_cov, run_year == run_years[i])$flow)
+  ICH_flow_spill_corr_table$mean_spill[i] <- mean(subset(ICH_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  ICH_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+ICH_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(ICH_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # ICH_cov_corr_table$covariate_1[i] <- "Flow"
+  # ICH_cov_corr_table$covariate_2[i] <- "Spill"
+  ICH_temp_spill_corr_table$mean_temp[i] <- mean(subset(ICH_cov, run_year == run_years[i])$temp)
+  ICH_temp_spill_corr_table$mean_spill[i] <- mean(subset(ICH_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  ICH_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+ICH_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Ice Harbor Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+ICH_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Ice Harbor Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+#### Lower Granite Dam
+
+```{r}
+plot_spill_v_flow(data = LGR_cov, dam = "Lower Granite Dam")
+plot_spill_v_temp(data = LGR_cov, dam = "Lower Granite Dam")
+
+#### Create a table of correlations, by year by dam ####
+run_years <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
+               "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+## Lower Granite Dam
+LGR_flow_spill_corr_table <- data.frame(run_year = run_years, mean_flow = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_flow_lm <- lm(spill~flow, data = subset(LGR_cov, run_year == run_years[i]))
+  spill_flow_lm_sum <- summary(spill_flow_lm)
+  # LGR_cov_corr_table$covariate_1[i] <- "Flow"
+  # LGR_cov_corr_table$covariate_2[i] <- "Spill"
+  LGR_flow_spill_corr_table$mean_flow[i] <- mean(subset(LGR_cov, run_year == run_years[i])$flow)
+  LGR_flow_spill_corr_table$mean_spill[i] <- mean(subset(LGR_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  LGR_flow_spill_corr_table$`R-squared`[i] <- round(spill_flow_lm_sum$adj.r.squared,2)
+}
+
+LGR_temp_spill_corr_table <- data.frame(run_year = run_years, mean_temp = rep(NA, 19), mean_spill = rep(NA, 19))
+for (i in 1:length(run_years)){
+  spill_temp_lm <- lm(spill~temp, data = subset(LGR_cov, run_year == run_years[i]))
+  spill_temp_lm_sum <- summary(spill_temp_lm)
+  # LGR_cov_corr_table$covariate_1[i] <- "Flow"
+  # LGR_cov_corr_table$covariate_2[i] <- "Spill"
+  LGR_temp_spill_corr_table$mean_temp[i] <- mean(subset(LGR_cov, run_year == run_years[i])$temp)
+  LGR_temp_spill_corr_table$mean_spill[i] <- mean(subset(LGR_cov, run_year == run_years[i])$spill)
+  # store adjusted R-squared in table
+  LGR_temp_spill_corr_table$`R-squared`[i] <- round(spill_temp_lm_sum$adj.r.squared,2)
+}
+
+LGR_flow_spill_corr_table  %>% 
+  mutate(mean_flow = round(mean_flow, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Flow" = mean_flow,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and flow for each year, for Lower Granite Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+LGR_temp_spill_corr_table %>% 
+  mutate(mean_temp = round(mean_temp, 2),
+         mean_spill = round(mean_spill, 2)) %>% 
+  dplyr::rename("Mean Temperature" = mean_temp,
+                "Mean Spill" = mean_spill,
+                "Run Year" = run_year) %>% 
+  kbl(caption = "Correlation between spill and temperature for each year, for Lower Granite Dam") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+```
 
 
 ### Figure S3: Detection efficiency estimation
