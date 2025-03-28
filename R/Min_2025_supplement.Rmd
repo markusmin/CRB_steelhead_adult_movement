@@ -1,10 +1,12 @@
 ---
-title: "Supplemental Materials for Min et al. 2025"
-author: "Markus Min"
+title: "Supplemental Material"
+subtitle: "Climate and hydropower interact to determine migration success of adult Steelhead in the Columbia River Basin"
+author: "Markus A. Min, Rebecca A. Buchanan, and Mark D. Scheuerell"
 date: "`r Sys.Date()`"
 output: 
   html_document:
     toc: true
+    toc_float: true
     toc_depth: 3
 ---
 
@@ -17,7 +19,7 @@ library(kableExtra)
 
 ## Supplemental Methods
 
-### Supplemental Methods 1: Tributary detection efficiency
+### 1 Tributary detection efficiency
 
 Detection efficiency at the in-stream PIT tag array closest to the mouth of the tributary (the confluence of the tributary with the mainstem Columbia or Snake River) was estimated for each tributary state. However, detection efficiency was not modeled for three tributaries of the Snake River (the Salmon River, the Grande Ronde River, and the Clearwater River), as these tributaries did not have a detection site on the mainstem of the tributary within 100 km of the confluence.
 
@@ -60,7 +62,7 @@ The above model was implemented in Stan (Carpenter et al., 2017), with 3 chains 
 
 
 
-### Supplemental Methods 2: Covariate data processing
+### 2 Covariate data processing
 
 #### Temperature data
 Due to the noise and gaps inherent to the temperature data, a series of steps were performed to clean this data. First, plots of temperature were manually inspected and sequential runs of temperature points that were outside of the range of possible values for that time of year were removed. Next, a filtering algorithm was applied to remove any temperature values that were more than four degrees outside of the interannual average temperature value for that day of the year, as well as any values that were more than two degrees outside of the 7-day moving average. To address the incomplete temporal resolution for temperature at each dam in our modeling framework, a state-space model was fit using the MARSS package (Holmes et al., 2014). The inputs for this model were the cleaned temperature data at the forebay and tailrace for the eight dams (a total of 16 temperature time series). The model was structured with only a single process (the basin-scale temperature) and 16 observations of that process. Each dam had a different offset/bias term (8 total). Model-estimated temperatures on each day for each dam were then exported by using the estimate of the basin-scale temperature plus the dam-specific offset.
@@ -73,7 +75,7 @@ Daily average spill (in thousands of cubic feet per second) was queried from the
 
 ## Supplemental Results
 
-### Table S1: Sample sizes
+### 1 Sample sizes
 ```{r}
 # Step 1: Load the model_data files to ensure that we are pulling the exact same
 # data as what is going into the model
@@ -312,456 +314,6 @@ sample_size_table %>%
   kbl(caption = "The number of fish per run year from each combination of natal tributary and rearing type (natural or hatchery origin).") %>% 
   kable_styling(latex_options = "HOLD_position")
 ```
-
-
-### 1 Post-overshoot fallback timing {.tabset .tabset-pills}
-
-These figures show the timing of observations of overshoot (first point) and first observation following post-overshoot fallback (second point) for each fish from a given population. Red points indicate terminal overshoot observations (where fish were not seen again below an overshoot dam following overshoot). Lines connecting overshoot observations with post-overshoot fallback observations indicate that time period in which a fallback event must have occurred. Dashed green lines indicate the winter months (January, February, and March) that were used to characterize the likely spill conditions encountered by fish in overshoot states. In our model, any fish that was last observed overshooting (red dots) or any fish where based on their detection history, may have fallen back during January, February, or March (any black lines that are at least partially between the two dashed green lines) are affected by the winter spill days covariate.
-
-```{r define_S1_functions}
-# add DPS info to origin_param_map
-origin_param_map$DPS <- c(rep("Middle Columbia", 6),
-                          rep("Upper Columbia", 4),
-                          rep("Snake River", 6),
-                          rep(NA, 3))
-
-
-# Here, we need to plot when fish are arriving back in natal tributaries after overshoot
-
-# Define a function that extracts the data and formats it for a plot
-plot_overshoot_fallback_timing <- function(data, natal_origin_select, DPS_select, rear_select){
-  #### Create a large DF that notes which states are overshoot states ####
-  DES_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
-                                          "mainstem, BON to MCN", 
-                                          "Deschutes River Mouth",
-                                          "Deschutes River Upstream",
-                                          "John Day River Mouth",          
-                                          "John Day River Upstream",
-                                          "Fifteenmile Creek Mouth",
-                                          "Fifteenmile Creek Upstream",
-                                          "Umatilla River Mouth",
-                                          "Umatilla River Upstream",
-                                          "BON to MCN other tributaries",
-                                          "loss"))]
-  
-  JDR_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
-                                          "mainstem, BON to MCN", 
-                                          "Deschutes River Mouth",
-                                          "Deschutes River Upstream",
-                                          "John Day River Mouth",          
-                                          "John Day River Upstream",
-                                          "Fifteenmile Creek Mouth",
-                                          "Fifteenmile Creek Upstream",
-                                          "Umatilla River Mouth",
-                                          "Umatilla River Upstream",
-                                          "BON to MCN other tributaries",
-                                          "loss"))]
-  
-  FIF_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
-                                          "mainstem, BON to MCN", 
-                                          "Deschutes River Mouth",
-                                          "Deschutes River Upstream",
-                                          "John Day River Mouth",          
-                                          "John Day River Upstream",
-                                          "Fifteenmile Creek Mouth",
-                                          "Fifteenmile Creek Upstream",
-                                          "Umatilla River Mouth",
-                                          "Umatilla River Upstream",
-                                          "BON to MCN other tributaries",
-                                          "loss"))]
-  
-  UMA_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
-                                          "mainstem, BON to MCN", 
-                                          "Deschutes River Mouth",
-                                          "Deschutes River Upstream",
-                                          "John Day River Mouth",          
-                                          "John Day River Upstream",
-                                          "Fifteenmile Creek Mouth",
-                                          "Fifteenmile Creek Upstream",
-                                          "Umatilla River Mouth",
-                                          "Umatilla River Upstream",
-                                          "BON to MCN other tributaries",
-                                          "loss"))]
-  
-    YAK_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
-                                          "mainstem, BON to MCN", 
-                                          "mainstem, MCN to ICH or PRA", 
-                                          "Deschutes River Mouth",
-                                          "Deschutes River Upstream",
-                                          "John Day River Mouth",          
-                                          "John Day River Upstream",
-                                          "Fifteenmile Creek Mouth",
-                                          "Fifteenmile Creek Upstream",
-                                          "Umatilla River Mouth",
-                                          "Umatilla River Upstream",
-                                          "BON to MCN other tributaries",
-                                          "Yakima River Mouth",            
-                                          "Yakima River Upstream",
-                                          "Walla Walla River Mouth",
-                                          "Walla Walla River Upstream",
-                                          "loss"))]
-    
-    WAWA_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
-                                          "mainstem, BON to MCN", 
-                                          "mainstem, MCN to ICH or PRA", 
-                                          "Deschutes River Mouth",
-                                          "Deschutes River Upstream",
-                                          "John Day River Mouth",          
-                                          "John Day River Upstream",
-                                          "Fifteenmile Creek Mouth",
-                                          "Fifteenmile Creek Upstream",
-                                          "Umatilla River Mouth",
-                                          "Umatilla River Upstream",
-                                          "BON to MCN other tributaries",
-                                          "Yakima River Mouth",            
-                                          "Yakima River Upstream",
-                                          "Walla Walla River Mouth",
-                                          "Walla Walla River Upstream",
-                                          "loss"))]
-  
-  WEN_overshoot_states <- c("mainstem, RRE to WEL", "mainstem, upstream of WEL",
-                                         "Entiat River Mouth", "Entiat River Upstream",
-                                         "Methow River Mouth", "Methow River Upstream",
-                                         "Okanogan River Mouth", "Okanogan River Upstream",
-                                         "Upstream WEL other tributaries")
-  
-  ENT_overshoot_states <- c("mainstem, upstream of WEL",
-                                         "Methow River Mouth", "Methow River Upstream",
-                                         "Okanogan River Mouth", "Okanogan River Upstream",
-                                         "Upstream WEL other tributaries")
-  
-  TUC_overshoot_states <- c("mainstem, upstream of LGR",
-                            "Asotin Creek Mouth",
-                            "Asotin Creek Upstream",
-                            "Clearwater River",
-                            "Salmon River",
-                            "Grande Ronde River",
-                            "Imnaha River Mouth",
-                            "Imnaha River Upstream")
-  
-overshoot_states <- data.frame(natal_origin = c(rep("Deschutes River", length(DES_overshoot_states)),
-                                                rep("John Day River", length(JDR_overshoot_states)),
-                                                rep("Fifteenmile Creek", length(FIF_overshoot_states)),
-                                                rep("Umatilla River", length(UMA_overshoot_states)),
-                                                rep("Yakima River", length(YAK_overshoot_states)),
-                                                rep("Walla Walla River", length(WAWA_overshoot_states)),
-                                                rep("Wenatchee River", length(WEN_overshoot_states)),
-                                                rep("Entiat River", length(ENT_overshoot_states)),
-                                                rep("Tucannon River", length(TUC_overshoot_states))),
-                               state = c(DES_overshoot_states,
-                                         JDR_overshoot_states,
-                                         FIF_overshoot_states,
-                                         UMA_overshoot_states,
-                                         YAK_overshoot_states,
-                                         WAWA_overshoot_states,
-                                         WEN_overshoot_states,
-                                         ENT_overshoot_states,
-                                         TUC_overshoot_states))
-
-overshoot_states$state_number <- NA 
-
-for (i in 1:nrow(overshoot_states)){
-  overshoot_states$state_number[i] <- which(model_states == overshoot_states$state[i])
-}
-
-  #### reformat data ####
-  # get origin
-origin_vector <- vector(length = nrow(data$cat_X_mat))
-for(i in 1:nrow(data$cat_X_mat)){
-  origin_vector[i] <- which(data$cat_X_mat[i,]==1)
-}
-
-# get dates of state visits
-transition_dates <- as.data.frame(data$transition_dates)
-colnames(transition_dates) <- 1:ncol(transition_dates)
-# add origin info
-transition_dates$origin <- origin_vector
-transition_dates %>% 
-  mutate(fish_ID = row_number()) %>% 
-  pivot_longer(cols = -c(fish_ID, origin), names_to = "state_history", values_to = "model_date") -> transition_dates
-
-# add the actual dates
-dates_actual <- data.frame(date_actual = seq(ymd("2005-06-01"), ymd("2024-12-31"), by = "days"),
-                           model_date = 1:length(seq(ymd("2005-06-01"), ymd("2024-12-31"), by = "days")))
-dates_actual %>% 
-  mutate(month_day = format(as.Date(date_actual), "%m-%d")) -> dates_actual
-
-transition_dates %>% 
-  left_join(., dates_actual, by = "model_date") -> transition_dates
-
-# get state visits
-state_visits <- as.data.frame(data$y)
-colnames(state_visits) <- 1:ncol(state_visits)
-# add origin info
-state_visits$origin <- origin_vector
-
-state_visits %>% 
-  mutate(fish_ID = row_number()) %>% 
-  pivot_longer(cols = -c(fish_ID, origin), names_to = "state_history", values_to = "state") -> state_visits
-
-# join state visits with transition dates
-transition_dates$state <- state_visits$state
-
-# keep only actual data
-transition_dates %>% 
-  filter(state != 0) -> transition_histories
-
-# join with origin_param_map
-if(rear_select == "wild"){
-  transition_histories %>% 
-  left_join(filter(dplyr::select(origin_param_map, natal_origin, wild), 
-                   natal_origin %in% subset(origin_param_map, DPS == DPS_select)$natal_origin), 
-            join_by(origin==wild)) -> transition_histories
-} else{
-  transition_histories %>% 
-  left_join(filter(dplyr::select(origin_param_map, natal_origin, hatchery), 
-                   natal_origin %in% subset(origin_param_map, DPS == DPS_select)$natal_origin), 
-            join_by(origin==hatchery)) -> transition_histories
-}
-
-# Note when fish are in an overshoot state
-transition_histories %>%
-  mutate(overshoot = ifelse(natal_origin == natal_origin_select & state %in% subset(overshoot_states, natal_origin == natal_origin_select)$state_number,
-                            "overshoot", "not overshoot")) -> transition_histories
-  
-subset(transition_histories, natal_origin == natal_origin_select) -> origin_data
-
-origin_data %>% 
-  group_by(fish_ID) %>% 
-  filter(any(overshoot == "overshoot")) -> origin_overshoots
-
-# figure out what day overshoot begins, and what day it ends
-origin_overshoots %>% 
-  group_by(fish_ID) %>% 
-  filter(overshoot == "overshoot") %>% 
-  filter(!(duplicated(fish_ID))) -> origin_first_overshoot
-
-origin_overshoots %>% 
-  mutate(end_overshoot = ifelse(lag(overshoot) == "overshoot" & overshoot == "not overshoot", "end overshoot", "not end overshoot")) -> origin_overshoots
-
-origin_overshoots %>% 
-  filter(overshoot == "overshoot" | end_overshoot == "end overshoot") -> origin_overshoot_history
-
-# here, we need to pull when they were seen after falling back (first not overshoot state timing),
-# and when they were last seen previous to falling back (this is the last overshoot state where
-# the date isn't the same)
-origin_overshoot_history %>%
-  # this drops any overshoot states that are implicit movements (and therefore,
-  # the dates aren't useful)
-  filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
-           overshoot == "overshoot" & date_actual != lead(date_actual) |
-           overshoot == "overshoot" & lead(state) == 41) %>%
-  # this now keeps only the observation directly before the fallback detection
-    filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
-           overshoot == "overshoot" & lead(overshoot) == "not overshoot") -> origin_end_overshoot_history
-
-# make the dates revolve around the run_year
-origin_end_overshoot_history %>% 
-  mutate(plotting_year = ifelse(month(date_actual) < 6, 2000, 1999)) %>% 
-  mutate(plotting_date = ymd(paste0(plotting_year, "-", month_day))) -> origin_end_overshoot_history
-
-origin_end_overshoot_history$ID_new <- rep(1:(nrow(origin_end_overshoot_history)/2), each = 2)
-
-# figure out which fish we don't see again
-origin_end_overshoot_history %>% 
-  group_by(fish_ID) %>% 
-  filter(lead(state) == 41) -> origin_overshoot_loss
-
-origin_end_overshoot_history %>% 
-  group_by(fish_ID) %>% 
-  filter(lead(state) == 41 | state == 41) -> origin_overshoot_loss
-
-# add a fake date to indicate that we don't know when this could end
-origin_overshoot_loss %>% 
-  mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-05-31"), ymd(plotting_date))) -> origin_overshoot_loss
-
-overshoot_fallback_timing_plot <- ggplot(origin_end_overshoot_history, aes(x = plotting_date, y = ID_new)) +
-  geom_line(aes(group = ID_new), linewidth = 0.25) +
-  geom_point() +
-  geom_point(data = subset(origin_overshoot_loss, state != 41), aes(x = plotting_date, y = ID_new), color = "red") +
-  # geom_line(data = origin_overshoot_loss, aes(group = ID_new, x = plotting_date, y = ID_new), color = "red") +
-  geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
-  geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
-  coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), 
-                  ylim = c(0, max(origin_end_overshoot_history$ID_new)+1), expand = FALSE) +
-    xlab("Date") +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-    theme(legend.position = "none",
-          panel.grid.major = element_line(color = "gray90"),
-          panel.background = element_rect(fill = "white", color = "black"),
-          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
-          axis.title.y = element_blank(),
-          axis.text.y = element_blank(),
-          axis.ticks.y = element_blank(),
-          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
-  ggtitle(paste0(natal_origin_select, ", ", ifelse(rear_select == "wild", "natural", rear_select)))
-
-return(overshoot_fallback_timing_plot)
-
-# origin_end_overshoot_history %>% 
-#   mutate(movement = ifelse(overshoot == "overshoot", "overshoot",
-#                            ifelse(overshoot == "not overshoot", "fallback", NA))) %>% 
-#   mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-07-01"), plotting_date)) -> fallback_overshoot_count_data
-# 
-# 
-# overshoot_fallback_timing_histogram <- ggplot(fallback_overshoot_count_data, aes(x = plotting_date, fill = movement)) +
-#   geom_histogram() +
-#   geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
-#   geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
-#   coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-07-31")), 
-#                   expand = FALSE) +
-#     xlab("Date") +
-#   # scale_x_date(date_breaks = "1 month") +
-#   # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-#   scale_x_date(date_breaks = "1 month", labels = c("Jun", "Jul", "Aug", "Sep",
-#                                                    "Oct", "Nov", "Dec", "Jan",
-#                                                    "Feb", "Mar", "Apr", "May",
-#                                                    "Jun", "NA", "NA")) +
-#     theme(panel.grid.major = element_line(color = "gray90"),
-#           panel.background = element_rect(fill = "white", color = "black"),
-#           panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
-#           plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
-#   ggtitle(paste0(natal_origin_select, ", ", rear_select))
-
-# return(list(overshoot_fallback_timing_plot, overshoot_fallback_timing_histogram))
-}
-```
-
-
-```{r generate_S1, fig.dim = c(6,12)}
-DES_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
-                               natal_origin_select = "Deschutes River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "wild")
-
-JDR_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
-                               natal_origin_select = "John Day River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "wild")
-
-FIF_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
-                               natal_origin_select = "Fifteenmile Creek", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "wild")
-
-UMA_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
-                               natal_origin_select = "Umatilla River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "wild")
-
-UMA_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCH_data, 
-                               natal_origin_select = "Umatilla River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "hatchery")
-
-YAK_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
-                               natal_origin_select = "Yakima River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "wild")
-
-WAWA_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
-                               natal_origin_select = "Walla Walla River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "wild")
-
-WAWA_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCH_data, 
-                               natal_origin_select = "Walla Walla River", 
-                               DPS_select = "Middle Columbia", 
-                               rear_select = "hatchery")
-
-ENT_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCW_data, 
-                               natal_origin_select = "Entiat River", 
-                               DPS_select = "Upper Columbia", 
-                               rear_select = "wild")
-
-WEN_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCW_data, 
-                               natal_origin_select = "Wenatchee River", 
-                               DPS_select = "Upper Columbia", 
-                               rear_select = "wild")
-
-WEN_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCH_data, 
-                               natal_origin_select = "Wenatchee River", 
-                               DPS_select = "Upper Columbia", 
-                               rear_select = "hatchery")
-
-TUC_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SRW_data, 
-                               natal_origin_select = "Tucannon River", 
-                               DPS_select = "Snake River", 
-                               rear_select = "wild")
-
-TUC_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SRH_data, 
-                               natal_origin_select = "Tucannon River", 
-                               DPS_select = "Snake River", 
-                               rear_select = "hatchery")
-```
-
-#### Deschutes (N)
-```{r fig.dim = c(6,10)}
-DES_W_overshoot_fallback_timing_plot
-```
-
-#### John Day (N)
-```{r fig.dim = c(6,10)}
-JDR_W_overshoot_fallback_timing_plot
-```
-
-#### Fifteenmile (N)
-```{r fig.dim = c(6,10)}
-FIF_W_overshoot_fallback_timing_plot
-```
-
-#### Umatilla (N)
-```{r fig.dim = c(6,10)}
-UMA_W_overshoot_fallback_timing_plot
-```
-
-#### Umatilla (H)
-```{r fig.dim = c(6,10)}
-UMA_H_overshoot_fallback_timing_plot
-```
-
-#### Yakima (N)
-```{r fig.dim = c(6,10)}
-YAK_W_overshoot_fallback_timing_plot
-```
-
-#### Walla Walla (N)
-```{r fig.dim = c(6,10)}
-WAWA_W_overshoot_fallback_timing_plot
-```
-
-#### Walla Walla (H)
-```{r fig.dim = c(6,10)}
-WAWA_H_overshoot_fallback_timing_plot
-```
-
-#### Entiat (N)
-```{r fig.dim = c(6,10)}
-ENT_W_overshoot_fallback_timing_plot
-```
-
-#### Wenatchee (N)
-```{r fig.dim = c(6,10)}
-WEN_W_overshoot_fallback_timing_plot
-```
-
-#### Wenatchee (H)
-```{r fig.dim = c(6,10)}
-WEN_H_overshoot_fallback_timing_plot
-```
-
-#### Tucannon (N)
-```{r fig.dim = c(6,10)}
-TUC_W_overshoot_fallback_timing_plot
-```
-
-#### Tucannon (H)
-```{r fig.dim = c(6,10)}
-TUC_H_overshoot_fallback_timing_plot
-```
-
-
-
 
 
 
@@ -1695,21 +1247,618 @@ LGR_temp_spill_corr_table %>%
 ```
 
 
-### Figure S3: Detection efficiency estimation
+### 3 Post-overshoot fallback timing {.tabset .tabset-pills}
+
+These figures show the timing of observations of overshoot (first point) and first observation following post-overshoot fallback (second point) for each fish from a given population. Red points indicate terminal overshoot observations (where fish were not seen again below an overshoot dam following overshoot). Lines connecting overshoot observations with post-overshoot fallback observations indicate that time period in which a fallback event must have occurred. Dashed green lines indicate the winter months (January, February, and March) that were used to characterize the likely spill conditions encountered by fish in overshoot states. In our model, any fish that was last observed overshooting (red dots) or where based on their detection history, may have fallen back during January, February, or March (any black lines that are at least partially between the two dashed green lines) are affected by the winter spill days covariate.
+
+```{r define_S1_functions}
+# add DPS info to origin_param_map
+origin_param_map$DPS <- c(rep("Middle Columbia", 6),
+                          rep("Upper Columbia", 4),
+                          rep("Snake River", 6),
+                          rep(NA, 3))
 
 
-### Figure S4: Model diagnostic figures
+# Here, we need to plot when fish are arriving back in natal tributaries after overshoot
+
+# Define a function that extracts the data and formats it for a plot
+plot_overshoot_fallback_timing <- function(data, natal_origin_select, DPS_select, rear_select){
+  #### Create a large DF that notes which states are overshoot states ####
+  DES_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+  JDR_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+  FIF_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+  UMA_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "loss"))]
+  
+    YAK_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "mainstem, MCN to ICH or PRA", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "Yakima River Mouth",            
+                                          "Yakima River Upstream",
+                                          "Walla Walla River Mouth",
+                                          "Walla Walla River Upstream",
+                                          "loss"))]
+    
+    WAWA_overshoot_states <- model_states[!(model_states %in% c("mainstem, mouth to BON",
+                                          "mainstem, BON to MCN", 
+                                          "mainstem, MCN to ICH or PRA", 
+                                          "Deschutes River Mouth",
+                                          "Deschutes River Upstream",
+                                          "John Day River Mouth",          
+                                          "John Day River Upstream",
+                                          "Fifteenmile Creek Mouth",
+                                          "Fifteenmile Creek Upstream",
+                                          "Umatilla River Mouth",
+                                          "Umatilla River Upstream",
+                                          "BON to MCN other tributaries",
+                                          "Yakima River Mouth",            
+                                          "Yakima River Upstream",
+                                          "Walla Walla River Mouth",
+                                          "Walla Walla River Upstream",
+                                          "loss"))]
+  
+  WEN_overshoot_states <- c("mainstem, RRE to WEL", "mainstem, upstream of WEL",
+                                         "Entiat River Mouth", "Entiat River Upstream",
+                                         "Methow River Mouth", "Methow River Upstream",
+                                         "Okanogan River Mouth", "Okanogan River Upstream",
+                                         "Upstream WEL other tributaries")
+  
+  ENT_overshoot_states <- c("mainstem, upstream of WEL",
+                                         "Methow River Mouth", "Methow River Upstream",
+                                         "Okanogan River Mouth", "Okanogan River Upstream",
+                                         "Upstream WEL other tributaries")
+  
+  TUC_overshoot_states <- c("mainstem, upstream of LGR",
+                            "Asotin Creek Mouth",
+                            "Asotin Creek Upstream",
+                            "Clearwater River",
+                            "Salmon River",
+                            "Grande Ronde River",
+                            "Imnaha River Mouth",
+                            "Imnaha River Upstream")
+  
+overshoot_states <- data.frame(natal_origin = c(rep("Deschutes River", length(DES_overshoot_states)),
+                                                rep("John Day River", length(JDR_overshoot_states)),
+                                                rep("Fifteenmile Creek", length(FIF_overshoot_states)),
+                                                rep("Umatilla River", length(UMA_overshoot_states)),
+                                                rep("Yakima River", length(YAK_overshoot_states)),
+                                                rep("Walla Walla River", length(WAWA_overshoot_states)),
+                                                rep("Wenatchee River", length(WEN_overshoot_states)),
+                                                rep("Entiat River", length(ENT_overshoot_states)),
+                                                rep("Tucannon River", length(TUC_overshoot_states))),
+                               state = c(DES_overshoot_states,
+                                         JDR_overshoot_states,
+                                         FIF_overshoot_states,
+                                         UMA_overshoot_states,
+                                         YAK_overshoot_states,
+                                         WAWA_overshoot_states,
+                                         WEN_overshoot_states,
+                                         ENT_overshoot_states,
+                                         TUC_overshoot_states))
+
+overshoot_states$state_number <- NA 
+
+for (i in 1:nrow(overshoot_states)){
+  overshoot_states$state_number[i] <- which(model_states == overshoot_states$state[i])
+}
+
+  #### reformat data ####
+  # get origin
+origin_vector <- vector(length = nrow(data$cat_X_mat))
+for(i in 1:nrow(data$cat_X_mat)){
+  origin_vector[i] <- which(data$cat_X_mat[i,]==1)
+}
+
+# get dates of state visits
+transition_dates <- as.data.frame(data$transition_dates)
+colnames(transition_dates) <- 1:ncol(transition_dates)
+# add origin info
+transition_dates$origin <- origin_vector
+transition_dates %>% 
+  mutate(fish_ID = row_number()) %>% 
+  pivot_longer(cols = -c(fish_ID, origin), names_to = "state_history", values_to = "model_date") -> transition_dates
+
+# add the actual dates
+dates_actual <- data.frame(date_actual = seq(ymd("2005-06-01"), ymd("2024-12-31"), by = "days"),
+                           model_date = 1:length(seq(ymd("2005-06-01"), ymd("2024-12-31"), by = "days")))
+dates_actual %>% 
+  mutate(month_day = format(as.Date(date_actual), "%m-%d")) -> dates_actual
+
+transition_dates %>% 
+  left_join(., dates_actual, by = "model_date") -> transition_dates
+
+# get state visits
+state_visits <- as.data.frame(data$y)
+colnames(state_visits) <- 1:ncol(state_visits)
+# add origin info
+state_visits$origin <- origin_vector
+
+state_visits %>% 
+  mutate(fish_ID = row_number()) %>% 
+  pivot_longer(cols = -c(fish_ID, origin), names_to = "state_history", values_to = "state") -> state_visits
+
+# join state visits with transition dates
+transition_dates$state <- state_visits$state
+
+# keep only actual data
+transition_dates %>% 
+  filter(state != 0) -> transition_histories
+
+# join with origin_param_map
+if(rear_select == "wild"){
+  transition_histories %>% 
+  left_join(filter(dplyr::select(origin_param_map, natal_origin, wild), 
+                   natal_origin %in% subset(origin_param_map, DPS == DPS_select)$natal_origin), 
+            join_by(origin==wild)) -> transition_histories
+} else{
+  transition_histories %>% 
+  left_join(filter(dplyr::select(origin_param_map, natal_origin, hatchery), 
+                   natal_origin %in% subset(origin_param_map, DPS == DPS_select)$natal_origin), 
+            join_by(origin==hatchery)) -> transition_histories
+}
+
+# Note when fish are in an overshoot state
+transition_histories %>%
+  mutate(overshoot = ifelse(natal_origin == natal_origin_select & state %in% subset(overshoot_states, natal_origin == natal_origin_select)$state_number,
+                            "overshoot", "not overshoot")) -> transition_histories
+  
+subset(transition_histories, natal_origin == natal_origin_select) -> origin_data
+
+origin_data %>% 
+  group_by(fish_ID) %>% 
+  filter(any(overshoot == "overshoot")) -> origin_overshoots
+
+# figure out what day overshoot begins, and what day it ends
+origin_overshoots %>% 
+  group_by(fish_ID) %>% 
+  filter(overshoot == "overshoot") %>% 
+  filter(!(duplicated(fish_ID))) -> origin_first_overshoot
+
+origin_overshoots %>% 
+  mutate(end_overshoot = ifelse(lag(overshoot) == "overshoot" & overshoot == "not overshoot", "end overshoot", "not end overshoot")) -> origin_overshoots
+
+origin_overshoots %>% 
+  filter(overshoot == "overshoot" | end_overshoot == "end overshoot") -> origin_overshoot_history
+
+# here, we need to pull when they were seen after falling back (first not overshoot state timing),
+# and when they were last seen previous to falling back (this is the last overshoot state where
+# the date isn't the same)
+origin_overshoot_history %>%
+  # this drops any overshoot states that are implicit movements (and therefore,
+  # the dates aren't useful)
+  filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
+           overshoot == "overshoot" & date_actual != lead(date_actual) |
+           overshoot == "overshoot" & lead(state) == 41) %>%
+  # this now keeps only the observation directly before the fallback detection
+    filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
+           overshoot == "overshoot" & lead(overshoot) == "not overshoot") -> origin_end_overshoot_history
+
+# make the dates revolve around the run_year
+origin_end_overshoot_history %>% 
+  mutate(plotting_year = ifelse(month(date_actual) < 6, 2000, 1999)) %>% 
+  mutate(plotting_date = ymd(paste0(plotting_year, "-", month_day))) -> origin_end_overshoot_history
+
+origin_end_overshoot_history$ID_new <- rep(1:(nrow(origin_end_overshoot_history)/2), each = 2)
+
+# figure out which fish we don't see again
+origin_end_overshoot_history %>% 
+  group_by(fish_ID) %>% 
+  filter(lead(state) == 41) -> origin_overshoot_loss
+
+origin_end_overshoot_history %>% 
+  group_by(fish_ID) %>% 
+  filter(lead(state) == 41 | state == 41) -> origin_overshoot_loss
+
+# add a fake date to indicate that we don't know when this could end
+origin_overshoot_loss %>% 
+  mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-05-31"), ymd(plotting_date))) -> origin_overshoot_loss
+
+overshoot_fallback_timing_plot <- ggplot(origin_end_overshoot_history, aes(x = plotting_date, y = ID_new)) +
+  geom_line(aes(group = ID_new), linewidth = 0.25) +
+  geom_point() +
+  geom_point(data = subset(origin_overshoot_loss, state != 41), aes(x = plotting_date, y = ID_new), color = "red") +
+  # geom_line(data = origin_overshoot_loss, aes(group = ID_new, x = plotting_date, y = ID_new), color = "red") +
+  geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
+  geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
+  coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), 
+                  ylim = c(0, max(origin_end_overshoot_history$ID_new)+1), expand = FALSE) +
+    xlab("Date") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+    theme(legend.position = "none",
+          panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+  ggtitle(paste0(natal_origin_select, ", ", ifelse(rear_select == "wild", "natural", rear_select)))
+
+return(overshoot_fallback_timing_plot)
+
+# origin_end_overshoot_history %>% 
+#   mutate(movement = ifelse(overshoot == "overshoot", "overshoot",
+#                            ifelse(overshoot == "not overshoot", "fallback", NA))) %>% 
+#   mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-07-01"), plotting_date)) -> fallback_overshoot_count_data
+# 
+# 
+# overshoot_fallback_timing_histogram <- ggplot(fallback_overshoot_count_data, aes(x = plotting_date, fill = movement)) +
+#   geom_histogram() +
+#   geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
+#   geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
+#   coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-07-31")), 
+#                   expand = FALSE) +
+#     xlab("Date") +
+#   # scale_x_date(date_breaks = "1 month") +
+#   # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+#   scale_x_date(date_breaks = "1 month", labels = c("Jun", "Jul", "Aug", "Sep",
+#                                                    "Oct", "Nov", "Dec", "Jan",
+#                                                    "Feb", "Mar", "Apr", "May",
+#                                                    "Jun", "NA", "NA")) +
+#     theme(panel.grid.major = element_line(color = "gray90"),
+#           panel.background = element_rect(fill = "white", color = "black"),
+#           panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+#           plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+#   ggtitle(paste0(natal_origin_select, ", ", rear_select))
+
+# return(list(overshoot_fallback_timing_plot, overshoot_fallback_timing_histogram))
+}
+```
 
 
-### Figure S5: Deschutes River movement
+```{r generate_S1, fig.dim = c(6,12)}
+DES_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Deschutes River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+JDR_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "John Day River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+FIF_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Fifteenmile Creek", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+UMA_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Umatilla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+UMA_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCH_data, 
+                               natal_origin_select = "Umatilla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "hatchery")
+
+YAK_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Yakima River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+WAWA_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCW_data, 
+                               natal_origin_select = "Walla Walla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "wild")
+
+WAWA_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = MCH_data, 
+                               natal_origin_select = "Walla Walla River", 
+                               DPS_select = "Middle Columbia", 
+                               rear_select = "hatchery")
+
+ENT_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCW_data, 
+                               natal_origin_select = "Entiat River", 
+                               DPS_select = "Upper Columbia", 
+                               rear_select = "wild")
+
+WEN_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCW_data, 
+                               natal_origin_select = "Wenatchee River", 
+                               DPS_select = "Upper Columbia", 
+                               rear_select = "wild")
+
+WEN_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = UCH_data, 
+                               natal_origin_select = "Wenatchee River", 
+                               DPS_select = "Upper Columbia", 
+                               rear_select = "hatchery")
+
+TUC_W_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SRW_data, 
+                               natal_origin_select = "Tucannon River", 
+                               DPS_select = "Snake River", 
+                               rear_select = "wild")
+
+TUC_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SRH_data, 
+                               natal_origin_select = "Tucannon River", 
+                               DPS_select = "Snake River", 
+                               rear_select = "hatchery")
+```
+
+#### Deschutes (N)
+```{r fig.dim = c(6,10)}
+DES_W_overshoot_fallback_timing_plot
+```
+
+#### John Day (N)
+```{r fig.dim = c(6,10)}
+JDR_W_overshoot_fallback_timing_plot
+```
+
+#### Fifteenmile (N)
+```{r fig.dim = c(6,10)}
+FIF_W_overshoot_fallback_timing_plot
+```
+
+#### Umatilla (N)
+```{r fig.dim = c(6,10)}
+UMA_W_overshoot_fallback_timing_plot
+```
+
+#### Umatilla (H)
+```{r fig.dim = c(6,10)}
+UMA_H_overshoot_fallback_timing_plot
+```
+
+#### Yakima (N)
+```{r fig.dim = c(6,10)}
+YAK_W_overshoot_fallback_timing_plot
+```
+
+#### Walla Walla (N)
+```{r fig.dim = c(6,10)}
+WAWA_W_overshoot_fallback_timing_plot
+```
+
+#### Walla Walla (H)
+```{r fig.dim = c(6,10)}
+WAWA_H_overshoot_fallback_timing_plot
+```
+
+#### Entiat (N)
+```{r fig.dim = c(6,10)}
+ENT_W_overshoot_fallback_timing_plot
+```
+
+#### Wenatchee (N)
+```{r fig.dim = c(6,10)}
+WEN_W_overshoot_fallback_timing_plot
+```
+
+#### Wenatchee (H)
+```{r fig.dim = c(6,10)}
+WEN_H_overshoot_fallback_timing_plot
+```
+
+#### Tucannon (N)
+```{r fig.dim = c(6,10)}
+TUC_W_overshoot_fallback_timing_plot
+```
+
+#### Tucannon (H)
+```{r fig.dim = c(6,10)}
+TUC_H_overshoot_fallback_timing_plot
+```
 
 
-### Figure S6: Spill volume vs. fallback rates
 
 
-### Figure S7: Final fates, under median conditions
 
 
-### Figure S8: Modeling days of March spill only - different winter spill effects
+### 4 Detection efficiency estimation {.tabset .tabset-pills}
 
+#### Fifteenmile Creek
+![Fifteenmile Creek, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/fifteenmile_fitted_DE_plot_era1.png){width=100%}
+
+
+#### Deschutes River
+![Deschutes River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/deschutes_fitted_DE_plot_era1.png){width=100%}
+
+#### John Day River
+![John Day River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/john_day_fitted_DE_plot_era1.png){width=100%}
+
+#### Umatilla River
+![Umatilla River, estimated detection efficiency in time period 1.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/umatilla_fitted_DE_plot_era1.png){width=100%}
+
+![Umatilla River, estimated detection efficiency in time period 2.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/umatilla_fitted_DE_plot_era2.png){width=100%}
+
+#### Walla Walla River
+![Walla Walla River, estimated detection efficiency in time period 1.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/walla_walla_fitted_DE_plot_era1.png){width=100%}
+
+![Walla Walla River, estimated detection efficiency in time period 2.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/walla_walla_fitted_DE_plot_era2.png){width=100%}
+
+![Walla Walla River, estimated detection efficiency in time period 3.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/walla_walla_fitted_DE_plot_era3.png){width=100%}
+
+![Walla Walla River, estimated detection efficiency in time period 4.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/walla_walla_fitted_DE_plot_era4.png){width=100%}
+
+#### Yakima River
+![Yakima River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/yakima_fitted_DE_plot_era1.png){width=100%}
+
+#### Wenatchee River
+![Wenatchee River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/wenatchee_fitted_DE_plot_era1.png){width=100%}
+
+#### Entiat River
+![Entiat River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/entiat_fitted_DE_plot_era1.png){width=100%}
+
+#### Methow River
+![Methow River, estimated detection efficiency in time period 1.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/methow_fitted_DE_plot_era1.png){width=100%}
+
+![Methow River, estimated detection efficiency in time period 2.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/methow_fitted_DE_plot_era2.png){width=100%}
+
+#### Okanogan River
+![Okanogan River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/okanogan_fitted_DE_plot_era1.png){width=100%}
+
+#### Tucannon River
+![Tucannon River, estimated detection efficiency in time period 1.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/tucannon_fitted_DE_plot_era1.png){width=100%}
+
+![Tucannon River, estimated detection efficiency in time period 2.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/tucannon_fitted_DE_plot_era2.png){width=100%}
+
+#### Asotin Creek
+![Asotin Creek, estimated detection efficiency in time period 1.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/asotin_fitted_DE_plot_era1.png){width=100%}
+
+![Asotin Creek, estimated detection efficiency in time period 2.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/asotin_fitted_DE_plot_era2.png){width=100%}
+
+#### Imnaha River
+![Imnaha River, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/imnaha_fitted_DE_plot_era1.png){width=100%}
+
+
+
+
+
+### 5 Model diagnostic figures
+
+![The R-hat convergence diagnostic for each of the six models run. The R-hat convergence diagnostic compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (ie, the between- and within-chain estimates don’t agree), R-hat is larger than 1. We recommend running at least four chains by default and only using the sample if R-hat is less than 1.05. Stan reports R-hat which is the maximum of rank normalized split-R-hat and rank normalized folded-split-R-hat, which works for thick tailed distributions and is sensitive also to differences in scale.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/rhat_comb_plots.png){width=100%}
+
+<br>
+
+![Bulk Effective Sample Size (bulk-ESS) using rank normalized draws, for each of the six models run. Bulk-ESS is useful measure for sampling efficiency in the bulk of the distribution (related e.g. to efficiency of mean and median estimates), and is well defined even if the chains do not have finite mean or variance. Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_bulk_comb_plots.png){width=100%}
+
+<br>
+
+![Tail Effective Sample Size (tail-ESS) using rank normalized draws, for each of the six models run. Tail-ESS is produces by computing the minimum of effective sample sizes for 5% and 95% quantiles. Tail-ESS is useful measure for sampling efficiency in the tails of the distribution (related e.g. to efficiency of variance and tail quantile estimates). Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_tail_comb_plots.png){width=100%}
+
+### 6 Final fates, under median conditions {.tabset .tabset-pills}
+#### Fifteenmile Creek
+![Fifteenmile Creek, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/fif_ff_comp_median_plot.png){width=100%}
+
+
+#### Deschutes River
+![Deschutes River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/des_ff_comp_median_plot.png){width=100%}
+
+#### John Day River
+![John Day River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/jdr_ff_comp_median_plot.png){width=100%}
+
+#### Umatilla River
+![Umatilla River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/uma_ff_comp_median_plot.png){width=100%}
+
+#### Walla Walla River
+![Walla Walla River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/wawa_ff_comp_median_plot.png){width=100%}
+
+#### Yakima River
+![Yakima River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/yak_ff_comp_median_plot.png){width=100%}
+
+#### Wenatchee River
+![Wenatchee River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/wen_ff_comp_median_plot.png){width=100%}
+
+#### Entiat River
+![Entiat River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/ent_ff_comp_median_plot.png){width=100%}
+
+#### Methow River
+![Methow River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/met_ff_comp_median_plot.png){width=100%}
+
+#### Okanogan River
+![Okanogan River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/oka_ff_comp_median_plot.png){width=100%}
+
+#### Tucannon River
+![Tucannon River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/tuc_ff_comp_median_plot.png){width=100%}
+
+#### Clearwater River
+
+NOTE: Detection efficiency could not be estimated for the Clearwater River, because of the lack of a site close to the confluence with the Snake River. Therefore, the estimate of final fate in the Clearwater River is biased low, while the estimate of final fate in the mainstem state that connects to the Clearwater river (mainstem, upstream of LGR) is biased high.
+
+<br>
+
+![Clearwater River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/cle_ff_comp_median_plot.png){width=100%}
+
+#### Asotin Creek
+![Asotin Creek, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/aso_ff_comp_median_plot.png){width=100%}
+
+#### Grande Ronde River
+
+NOTE: Detection efficiency could not be estimated for the Clearwater River, because of the lack of a site close to the confluence with the Snake River. Therefore, the estimate of final fate in the Clearwater River is biased low, while the estimate of final fate in the mainstem state that connects to the Clearwater river (mainstem, upstream of LGR) is biased high.
+
+<br>
+
+![Grande Ronde River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/gr_ff_comp_median_plot.png){width=100%}
+
+#### Salmon River
+
+NOTE: Detection efficiency could not be estimated for the Clearwater River, because of the lack of a site close to the confluence with the Snake River. Therefore, the estimate of final fate in the Clearwater River is biased low, while the estimate of final fate in the mainstem state that connects to the Clearwater river (mainstem, upstream of LGR) is biased high.
+
+<br>
+
+![Salmon River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/sal_ff_comp_median_plot.png){width=100%}
+
+#### Imnaha River
+![Imnaha River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/imn_ff_comp_median_plot.png){width=100%}
+
+### 7 Deschutes River movement
+![Probability of movement into the Deschutes River by temperature, conditional on being in the reach of the mainstem Columbia between Bonneville and McNary Dam. Histograms on the plot margins indicate the temperature experiences of individual fish. Because this movement occurs within the Middle Columbia DPS, those populations have separate probabilities of movement, and are shown in panels A-F, while fish from the Upper Columbia DPS and the Snake River DPS have shared movement probabilities for this movement and are shown in panels G and H.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/Fig5_deschutes_temp_movements.png){width=100%}
+
+### 8 Spill volume vs. fallback rates {.tabset .tabset-pills}
+
+#### Bonneville Dam
+![Probability of fallback at Bonneville Dam, by volume of spill. Because this movement occurs within the Middle Columbia DPS, those populations have separate probabilities of movement, and are shown in panels A-H, while fish from the Upper Columbia DPS and the Snake River DPS have shared movement probabilities for this movement and are shown in panels I-L. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/BON_spill_fallback.png){width=100%}
+
+#### McNary Dam
+![Probability of fallback at McNary Dam, by volume of spill. Because this movement at the juncture between the Middle Columbia, Upper Columbia, and Snake River DPS boundaries, every population has a unique probability of movement. All populations that are downstream of McNary Dam (the Fifteenmile Creek, Deschutes River, John Day River, and Umatilla River) are affected by winter spill days rather than spill volume for this movement, as it is a post-overshoot fallback movement. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/MCN_spill_fallback.png){width=100%}
+
+#### Ice Harbor Dam
+![Probability of fallback at Ice Harbor Dam, by volume of spill. Only Snake River populations are shown because an ascent of Ice Harbor Dam by any populations from the Middle or Upper Columbia would be overshoot and therefore the probability of fallback is affected by winter spill days rather than spill volume. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/ICH_spill_fallback.png){width=100%}
+
+#### Lower Granite Dam
+![Probability of fallback at Lower Granite Dam, by volume of spill. Only Snake River populations are shown because an ascent of Lower Granite Dam by any populations from the Middle or Upper Columbia would be overshoot and therefore the probability of fallback is affected by winter spill days rather than spill volume. The Tucannon River is also not shown because Lower Granite Dam is an overshoot for that population. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/LGR_spill_fallback.png){width=100%}
+
+### 9 Post-overshoot fallback vs. March spill
+
+This section presents the results of the same model, but run where only days of spill in March are used as a covariate instead of days of spill in January, February, and March (as is used in the base model).
+
+![The effect of March spill days on movement probabilities out of the mainstem state directly upstream of the mainstem state that connects to the natal tributary for (A) John Day River natural origin Steelhead, (B) Umatilla River natural origin Steelhead, (C) Umatilla River hatchery origin Steelhead, (D) Yakima River natural origin Steelhead, (E) Walla Walla River natural origin Steelhead, (F) Walla Walla River hatchery origin Steelhead, (G) Wenatchee River natural origin Steelhead, (H) Wenatchee River hatchery origin Steelhead, (I) Entiat River natural origin Steelhead, (J) Tucannon River natural origin Steelhead, and (K) Tucannon River hatchery origin Steelhead. Histograms on the plot margins indicate the temperature experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/alternative_spill_treatment/paper_figures/Fig6_spilldays_plot.png){width=100%}
+
+<br>
+
+![The homing probability for (A) John Day River, (B) Umatilla River, (C) Walla Walla River, (D) Wenatchee River, (E) Tucannon River, (F) Entiat River, and (G) Yakima River Steelhead under different scenarios for basin-wide temperature and March spill days (0, 10, 20, or 30 days) at the overshoot dam. The temperature scenarios are specific run years from the dataset, with the coldest year being the 2011/2012 run year, the average year being the 2005/2006 run year, and the warmest year being the 2015/2016 run year.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/alternative_spill_treatment/paper_figures/Fig8_FF_cov_combined_plot_marchspill.png){width=100%}
 
