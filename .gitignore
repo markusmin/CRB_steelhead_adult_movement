@@ -2,8 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
 
 # ignore large file that contains every fish seen at BON 
 # this file is only used to query PTAGIS, but is not actually an input to the modeling workflow
 Data/PTAGIS_queries/BON_sthd_2005-06-01_2025_01_23.csv
 
+# ignore the map files
+map_files/
