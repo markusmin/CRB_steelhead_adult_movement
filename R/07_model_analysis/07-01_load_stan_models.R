@@ -3,7 +3,7 @@
 # This script loads and reformats all of our model runs, so that we can run subsequent analyses on them.
 
 # if this is being run on hyak, need to change wd:
-setwd("/gscratch/scrubbed/mmin/")
+# setwd("/gscratch/scrubbed/mmin/")
 
 #### Load libraries, state information ####
 library(cmdstanr)

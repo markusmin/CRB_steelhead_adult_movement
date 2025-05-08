@@ -1127,7 +1127,6 @@ plot_compare_rear_temp_effect_multiple_movements <- function(origin_select,
   # Remove any instances for rug plot of fish that would have received temp0 covariate
   covariate_experiences %>% 
     dplyr::rename(date_numeric = date) %>%
-    # keep only jan/feb/mar 
     mutate(date = ymd("2005-05-31") + days(date_numeric)) %>% 
     mutate(month = month(date)) %>% 
     filter(!(month %in% c(1,2,3,4,5))) -> covariate_experiences
@@ -1137,7 +1136,7 @@ plot_compare_rear_temp_effect_multiple_movements <- function(origin_select,
   
   movement_colors <- c("Overshoot" = "#ff7f00", "Overshoot - ICH" = "#ff7f00",
                        "Overshoot - PRA" = "#ff7f00",
-                       "Deschutes River" = "#a6cee3",
+                       "Deschutes River" = "#8c510a",
                        "Home" = "#1f78b4", "Loss" = "#e31a1c")
   
   rear_temp_move_prob_quantiles %>% 

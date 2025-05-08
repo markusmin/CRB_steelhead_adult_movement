@@ -22,4 +22,4 @@
 ## We don't need any modules beyond the default loaded ones
 
 ##  Scripts to be executed here
-apptainer exec --bind ../../:/gscratch/scrubbed/mmin ../../../../../gscratch/stf/mmin/cmdstanr_latest.sif Rscript 07-07-02_jdr_ff_cov.R
+apptainer exec --bind ../../../:/gscratch/scrubbed/mmin ../../../../../../gscratch/stf/mmin/cmdstanr_latest.sif Rscript 07-07-02_jdr_ff_cov.R

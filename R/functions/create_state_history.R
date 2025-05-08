@@ -783,7 +783,8 @@ create_state_history <- function(data_quartile){
   # Treat pre-BON tributaries and pre-BON mainstem the same; this will simplify modeling,
   # and pre-BON tributary visits aren't observed
   site_classification %>% 
-    mutate(site_class = ifelse(site_class == "pre_BON_other_trib_sites", "pre_BON_inriver", site_class)) -> site_classification
+    mutate(site_class = ifelse(site_class == "pre_BON_other_trib_sites", "pre_BON_inriver", site_class)) %>% 
+    mutate(state = ifelse(state == "Pre BON other tributaries", "mainstem, BON to MCN", state)) -> site_classification
   
   
   # Export site classification

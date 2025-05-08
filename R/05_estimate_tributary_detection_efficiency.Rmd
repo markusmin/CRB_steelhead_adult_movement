@@ -2282,13 +2282,14 @@ DE_plot_function <- function(predicted_DE_quantiles, run_year_det_eff_discharge_
   plot <- ggplot(predicted_DE_quantiles, aes(x = discharge, y = value, color = name, linetype = name)) +
     geom_line(size = 1) +
     geom_point(data = run_year_det_eff_discharge_data, aes(x = mean_discharge_zscore, y = det_eff, size = total), inherit.aes = FALSE) +
-    geom_text(data = run_year_det_eff_discharge_data, aes(x = mean_discharge_zscore, y = det_eff-0.05, label = run_year), inherit.aes = FALSE) +
+    # geom_text(data = run_year_det_eff_discharge_data, aes(x = mean_discharge_zscore, y = det_eff-0.05, label = run_year), inherit.aes = FALSE) +
+    geom_text_repel(data = run_year_det_eff_discharge_data, aes(x = mean_discharge_zscore, y = det_eff, label = run_year), inherit.aes = FALSE) +
     xlab("Discharge (Z-scored)") +
     ylab("Detection Efficiency") +
-    scale_color_manual(values = c("grey50", "black", "grey50")) +
-    scale_linetype_manual(values = c(2,1,2)) +
+    scale_color_manual(values = c("grey50", "black", "grey50"), guide = "none") +
+    scale_linetype_manual(values = c(2,1,2), guide = "none") +
     ggtitle(plot_name) +
-    theme(legend.position = "none",
+    theme(
           axis.text = element_text(size = 10),
           axis.title = element_text(size = 14)) +
     scale_y_continuous(limits = c(0,1), expand = c(0,0))
@@ -2373,50 +2374,6 @@ entiat_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = entiat_p
 
 entiat_fitted_DE_plot_era1
 
-#### Fifteenmile Creek ####
-# Fifteenmile Creek doesn't have any discharge data, so we don't need
-# to predict based on discharge.
-
-# fifteenmile_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
-#                                                  alpha = "fifteenmile_alpha1", 
-#                                                  beta = "fifteenmile_beta", 
-#                                                  niter = 1000, 
-#                                                  nchains = 3)
-# fifteenmile_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Fifteenmile Creek", 
-#                                                                river_mouth_site = "158 - Fifteenmile Ck at Eightmile Ck", 
-#                                                                river_mouth_site_start_date = "2011-11-29", 
-#                                                                river_mouth_site_end_date = "2025-01-01",
-#                                                           discharge_data = all_tribs_discharge_zscore,
-#                                                           run_years = c("11/12", "12/13", "13/14", 
-#                                                                          "14/15", "15/16", "16/17", "17/18", "18/19"))
-# fifteenmile_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = fifteenmile_predicted_DE_quantiles_era1, 
-#                                                run_year_det_eff_discharge_data = fifteenmile_det_discharge_data_era1, 
-#                                                plot_name = "Fifteenmile Creek (11/12-18/19)")
-# 
-# fifteenmile_fitted_DE_plot_era1
-
-#### Imnaha River ####
-# Imnaha River doesn't have any discharge data, so we don't need
-# to predict based on discharge.
-
-# imnaha_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long, 
-#                                                  alpha = "imnaha_alpha1", 
-#                                                  beta = "imnaha_beta", 
-#                                                  niter = 1000, 
-#                                                  nchains = 3)
-# imnaha_det_discharge_data_era1 <- prep_det_discharge_data(tributary_name = "Imnaha River", 
-#                                                           river_mouth_site = "IR1 - Lower Imnaha River ISA @ km 7", 
-#                                                           river_mouth_site_start_date = "2012-12-01", 
-#                                                           river_mouth_site_end_date = "2025-01-01",
-#                                                           discharge_data = all_tribs_discharge_zscore,
-#                                                           run_years = c("10/11", "11/12", "12/13", "13/14", 
-#                                                                          "14/15", "15/16", "16/17", "17/18", 
-#                                                                         "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
-# imnaha_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = imnaha_predicted_DE_quantiles_era1, 
-#                                                run_year_det_eff_discharge_data = imnaha_det_discharge_data_era1, 
-#                                                plot_name = "Imnaha River (10/11-23/24)")
-
-# imnaha_fitted_DE_plot_era1
 
 #### John Day River ####
 
@@ -2697,6 +2654,90 @@ yakima_fitted_DE_plot_era1 <- DE_plot_function(predicted_DE_quantiles = yakima_p
 yakima_fitted_DE_plot_era1
 ```
 
+```{r plot_fifteenmile_imnaha}
+#### Define the function ####
+
+DE_plot_function_nodischarge <- function(predicted_DE_quantiles, plot_name,
+                                         tributary_name, river_mouth_site, 
+                                         river_mouth_site_start_date, river_mouth_site_end_date,
+                                         run_years){
+  
+  # get the detection efficiency data
+  trib_run_year_det_eff <- run_year_det_eff(tributary_name = tributary_name, river_mouth_site = river_mouth_site, 
+                           river_mouth_site_start_date = river_mouth_site_start_date, 
+                           river_mouth_site_end_date = river_mouth_site_end_date)
+  trib_run_year_det_eff %>% 
+    filter(run_year %in% run_years) -> trib_run_year_det_eff
+  
+  trib_run_year_det_eff$year_for_plot <- seq(-1, 1, length.out = nrow(trib_run_year_det_eff))
+  
+  # it's all the same for each discharge value
+  plot_data <- subset(predicted_DE_quantiles, discharge == 0)
+  plot_data %>% 
+    bind_rows(plot_data, plot_data) -> plot_data
+  plot_data$x_val <- rep(c(-1, 0, 1), each = 3)
+  
+  plot <- ggplot(plot_data, aes(x = x_val, y = value, color = name, linetype = name)) +
+    geom_line(size = 1) +
+    geom_point(data = trib_run_year_det_eff, aes(x = year_for_plot, y = det_eff, size = total), inherit.aes = FALSE) +
+    geom_text_repel(data = trib_run_year_det_eff, aes(x = year_for_plot, y = det_eff, label = run_year), inherit.aes = FALSE) +
+    xlab("Year") +
+    ylab("Detection Efficiency") +
+    scale_color_manual(values = c("grey50", "black", "grey50"), guide = "none") +
+    scale_linetype_manual(values = c(2,1,2), guide = "none") +
+    ggtitle(plot_name) +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 14)) +
+    scale_y_continuous(limits = c(0,1), expand = c(0,0))
+  
+  return(plot)
+}
+
+#### Fifteenmile Creek ####
+# Fifteenmile Creek doesn't have any discharge data, so we don't need
+# to predict based on discharge.
+
+fifteenmile_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long,
+                                                 alpha = "fifteenmile_alpha1",
+                                                 beta = "fifteenmile_beta",
+                                                 niter = 1000,
+                                                 nchains = 3)
+
+fifteenmile_fitted_DE_plot_era1 <- DE_plot_function_nodischarge(predicted_DE_quantiles = fifteenmile_predicted_DE_quantiles_era1, 
+                                                                plot_name = "Fifteenmile Creek (11/12-18/19)",
+                                         tributary_name = "Fifteenmile Creek", 
+                                                               river_mouth_site = "158 - Fifteenmile Ck at Eightmile Ck",
+                                                               river_mouth_site_start_date = "2011-11-29",
+                                                               river_mouth_site_end_date = "2025-01-01",
+                                         run_years = c("11/12", "12/13", "13/14", 
+                                          "14/15", "15/16", "16/17", "17/18", "18/19"))
+
+
+#### Imnaha River ####
+# Imnaha River doesn't have any discharge data, so we don't need
+# to predict based on discharge.
+
+imnaha_predicted_DE_quantiles_era1 <- predict_DE(draws_object = DE_param_draws_long,
+                                                 alpha = "imnaha_alpha1",
+                                                 beta = "imnaha_beta",
+                                                 niter = 1000,
+                                                 nchains = 3)
+
+imnaha_fitted_DE_plot_era1 <- DE_plot_function_nodischarge(predicted_DE_quantiles = imnaha_predicted_DE_quantiles_era1, 
+                                                                plot_name = "Imnaha River (10/11-23/24)",
+                                         tributary_name = "Imnaha River", 
+                                                          river_mouth_site = "IR1 - Lower Imnaha River ISA @ km 7",
+                                                          river_mouth_site_start_date = "2012-12-01",
+                                                          river_mouth_site_end_date = "2025-01-01",
+                                                          run_years = c("10/11", "11/12", "12/13", "13/14",
+                                                                         "14/15", "15/16", "16/17", "17/18",
+                                                                        "18/19", "19/20", "20/21","21/22", "22/23", "23/24"))
+
+```
+
+
 ```{r export_fits}
 ggarrange(umatilla_fitted_DE_plot_era1, 
           umatilla_fitted_DE_plot_era2,
@@ -2715,10 +2756,34 @@ ggarrange(umatilla_fitted_DE_plot_era1,
                        asotin_fitted_DE_plot_era1,
                        asotin_fitted_DE_plot_era2,
                        tucannon_fitted_DE_plot_era1,
-                       tucannon_fitted_DE_plot_era2, ncol = 4, nrow = 5) -> DE_plots
+                       tucannon_fitted_DE_plot_era2,
+          fifteenmile_fitted_DE_plot_era1,
+          imnaha_fitted_DE_plot_era1,
+          ncol = 4, nrow = 5) -> DE_plots
 
-ggsave(here::here("figures", "DE_plots.pdf"), DE_plots, height = 15, width = 20)
+ggsave(here::here("figures", "detection_efficiency" ,"DE_plots.pdf"), DE_plots, height = 15, width = 20)
 
-# should plot Imnaha and Fifteenmile as intercept only
+# Save all of these plots individually
+ggsave(here::here("figures", "detection_efficiency", "umatilla_fitted_DE_plot_era1.png"), umatilla_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "umatilla_fitted_DE_plot_era2.png"), umatilla_fitted_DE_plot_era2, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "walla_walla_fitted_DE_plot_era1.png"), walla_walla_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "walla_walla_fitted_DE_plot_era2.png"), walla_walla_fitted_DE_plot_era2, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "walla_walla_fitted_DE_plot_era3.png"), walla_walla_fitted_DE_plot_era3, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "walla_walla_fitted_DE_plot_era4.png"), walla_walla_fitted_DE_plot_era4, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "yakima_fitted_DE_plot_era1.png"), yakima_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "deschutes_fitted_DE_plot_era1.png"), deschutes_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "john_day_fitted_DE_plot_era1.png"), john_day_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "okanogan_fitted_DE_plot_era1.png"), okanogan_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "wenatchee_fitted_DE_plot_era1.png"), wenatchee_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "entiat_fitted_DE_plot_era1.png"), entiat_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "methow_fitted_DE_plot_era1.png"), methow_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "methow_fitted_DE_plot_era2.png"), methow_fitted_DE_plot_era2, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "asotin_fitted_DE_plot_era1.png"), asotin_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "asotin_fitted_DE_plot_era2.png"), asotin_fitted_DE_plot_era2, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "tucannon_fitted_DE_plot_era1.png"), tucannon_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "tucannon_fitted_DE_plot_era2.png"), tucannon_fitted_DE_plot_era2, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "fifteenmile_fitted_DE_plot_era1.png"), fifteenmile_fitted_DE_plot_era1, height = 6, width = 8)
+ggsave(here::here("figures", "detection_efficiency", "imnaha_fitted_DE_plot_era1.png"), imnaha_fitted_DE_plot_era1, height = 6, width = 8)
+
 ```
 
