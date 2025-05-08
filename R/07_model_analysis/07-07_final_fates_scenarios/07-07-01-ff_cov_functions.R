@@ -4,8 +4,13 @@
 # This script will be sourced by the other scripts that run individual populations through these simulations.
 
 ##### Load the model runs and packages #####
-source("R/07_model_analysis/07-01_load_stan_models.R")
 
+
+# If we are running this on hyak, we need to change the source path so that the remaining file paths will work
+setwd("/gscratch/scrubbed/mmin/")
+
+# load the model runs and packages
+source("R/07_model_analysis/07-01_load_stan_models.R")
 
 #### Select representative warm vs. cold years ####
 
@@ -90,9 +95,6 @@ ggplot(season0_annual_spill_medians, aes(x = year, y = BON)) +
   geom_point(color = "blue") +
   geom_point(data = season1_annual_spill_medians, aes(x = year, y = BON), color = "red")
 
-plot(x = season1_annual_temp_medians$BON, y = season1_annual_spill_medians$BON)
-# spill volume and temperature are clearly correlated: lower temperature = lower spill
-# So you have to plot spill and temp together
 
 # We'll judge warm v cool based on summer/fall temps, since that's when the majority of movements are happening
 # pick out median, 25%, 75%
