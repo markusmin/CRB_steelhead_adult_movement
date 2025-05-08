@@ -27,7 +27,7 @@ figures/alternative_spill_treatment/diagnostic_plots/
 figures/alternative_spill_treatment/final_fates/
 figures/alternative_spill_treatment/final_fates_scenarios/
 figures/alternative_spill_treatment/spilldays/
-figures/alternative_spill_treatment/spilldays/temperature_effects/
+figures/alternative_spill_treatment/temperature_effects/
 
 # ignore data plots
 figures/data_plots/
