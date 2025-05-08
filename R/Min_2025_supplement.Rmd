@@ -1,13 +1,17 @@
 ---
 title: "Supplemental Material"
-subtitle: "Climate and hydropower interact to determine migration success of adult Steelhead in the Columbia River Basin"
 author: "Markus A. Min, Rebecca A. Buchanan, and Mark D. Scheuerell"
 date: "`r Sys.Date()`"
-output: 
+output:
+  pdf_document:
+    toc: true
+    toc_depth: '3'
   html_document:
     toc: true
     toc_float: true
     toc_depth: 3
+subtitle: Modeling climate and hydropower influences on movement ecology to inform
+  management of an anadromous species
 ---
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -54,7 +58,7 @@ Table S1: Tributary PIT tag antenna configurations used in detection efficiency 
 For our model of detection efficiency, we denote $z_i$ as the detection of fish $i$, $p_det$ as the probability of detection for fish $i$, $\alpha_{j,k}$ as the antenna configuration for tributary $j$ under configuration $k$, $\beta_j$ as the slope for the effect of discharge, and $x_{j,t}$ as the mean discharge for tributary $j$ in year $t$. The model for detection efficiency was as follows:
 
 $$
-z_i ∼ Bernoulli(p_{det,i}) \\
+z_i \sim Bernoulli(p_{det,i}) \\
 logit(p_{det,i}) =\alpha_{j,k} + \beta_j x_{j,t}
 $$
 
@@ -1760,15 +1764,15 @@ TUC_H_overshoot_fallback_timing_plot
 
 ### 5 Model diagnostic figures
 
-![The R-hat convergence diagnostic for each of the six models run. The R-hat convergence diagnostic compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (ie, the between- and within-chain estimates don’t agree), R-hat is larger than 1. We recommend running at least four chains by default and only using the sample if R-hat is less than 1.05. Stan reports R-hat which is the maximum of rank normalized split-R-hat and rank normalized folded-split-R-hat, which works for thick tailed distributions and is sensitive also to differences in scale.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/rhat_comb_plots.png){width=100%}
+![The R-hat convergence diagnostic for each of the six models run. The R-hat convergence diagnostic compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (i.e., the between- and within-chain estimates don’t agree), R-hat is larger than 1. We recommend running at least four chains by default and only using the sample if R-hat is less than 1.05. Stan reports R-hat which is the maximum of rank normalized split-R-hat and rank normalized folded-split-R-hat, which works for thick tailed distributions and is sensitive also to differences in scale.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/rhat_comb_plots.png){width=100%}
 
 <br>
 
-![Bulk Effective Sample Size (bulk-ESS) using rank normalized draws, for each of the six models run. Bulk-ESS is useful measure for sampling efficiency in the bulk of the distribution (related e.g. to efficiency of mean and median estimates), and is well defined even if the chains do not have finite mean or variance. Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_bulk_comb_plots.png){width=100%}
+![Bulk Effective Sample Size (bulk-ESS) using rank normalized draws, for each of the six models run. Bulk-ESS is useful measure for sampling efficiency in the bulk of the distribution (related to efficiency of mean and median estimates), and is well defined even if the chains do not have finite mean or variance. Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_bulk_comb_plots.png){width=100%}
 
 <br>
 
-![Tail Effective Sample Size (tail-ESS) using rank normalized draws, for each of the six models run. Tail-ESS is produces by computing the minimum of effective sample sizes for 5% and 95% quantiles. Tail-ESS is useful measure for sampling efficiency in the tails of the distribution (related e.g. to efficiency of variance and tail quantile estimates). Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_tail_comb_plots.png){width=100%}
+![Tail Effective Sample Size (tail-ESS) using rank normalized draws, for each of the six models run. Tail-ESS is produces by computing the minimum of effective sample sizes for 5% and 95% quantiles. Tail-ESS is useful measure for sampling efficiency in the tails of the distribution (related to efficiency of variance and tail quantile estimates). Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_tail_comb_plots.png){width=100%}
 
 ### 6 Final fates, under median conditions {.tabset .tabset-pills}
 #### Fifteenmile Creek
@@ -1838,7 +1842,7 @@ NOTE: Detection efficiency could not be estimated for the Clearwater River, beca
 ### 7 Deschutes River movement
 ![Probability of movement into the Deschutes River by temperature, conditional on being in the reach of the mainstem Columbia between Bonneville and McNary Dam. Histograms on the plot margins indicate the temperature experiences of individual fish. Because this movement occurs within the Middle Columbia DPS, those populations have separate probabilities of movement, and are shown in panels A-F, while fish from the Upper Columbia DPS and the Snake River DPS have shared movement probabilities for this movement and are shown in panels G and H.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/Fig5_deschutes_temp_movements.png){width=100%}
 
-### 8 Spill volume vs. fallback rates {.tabset .tabset-pills}
+### 8 En-route fallback as a function of spill volume {.tabset .tabset-pills}
 
 #### Bonneville Dam
 ![Probability of fallback at Bonneville Dam, by volume of spill. Because this movement occurs within the Middle Columbia DPS, those populations have separate probabilities of movement, and are shown in panels A-H, while fish from the Upper Columbia DPS and the Snake River DPS have shared movement probabilities for this movement and are shown in panels I-L. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/BON_spill_fallback.png){width=100%}
@@ -1852,7 +1856,7 @@ NOTE: Detection efficiency could not be estimated for the Clearwater River, beca
 #### Lower Granite Dam
 ![Probability of fallback at Lower Granite Dam, by volume of spill. Only Snake River populations are shown because an ascent of Lower Granite Dam by any populations from the Middle or Upper Columbia would be overshoot and therefore the probability of fallback is affected by winter spill days rather than spill volume. The Tucannon River is also not shown because Lower Granite Dam is an overshoot for that population. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/LGR_spill_fallback.png){width=100%}
 
-### 9 Post-overshoot fallback vs. March spill
+### 9 Post-overshoot fallback as a function of March spill
 
 This section presents the results of the same model, but run where only days of spill in March are used as a covariate instead of days of spill in January, February, and March (as is used in the base model).
 
