@@ -1,9 +1,10 @@
 # CRB_steelhead_adult_movement
 Workflow for using PIT tag detections to fit a multistate movement model to adult Steelhead returning to the Columbia River Basin.
 
-*last updated: 2025-01-29*
+*last updated: 2025-05-07*
 
-Note: The data files are very large and therefore are not uploaded to GitHub. If you would like access to the data files, please contact me directly.
+Note: The data files are very large and therefore are not uploaded to GitHub. If you would like access to the data files, 
+please contact me directly or follow the instructions below to query PTAGIS and obtain the files.
 
 To reproduce this analysis, you must run the following scripts **sequentially**:
 
