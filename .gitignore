@@ -3,6 +3,9 @@
 .RData
 .Ruserdata
 .DS_Store
+R/.DS_Store
+R/07_model_analysis/.DS_Store
+R/hyak/.DS_Store
 
 # ignore large file that contains every fish seen at BON 
 # this file is only used to query PTAGIS, but is not actually an input to the modeling workflow
@@ -11,6 +14,10 @@ Data/PTAGIS_queries/BON_sthd_2005-06-01_2025_01_23.csv
 # ignore the complete tag histories, since they're very large
 Data/PTAGIS_queries/complete_tag_histories/
 Data/PTAGIS_queries/tag_codes/
+
+# Ignore the whole Stan folder because the MCMC outputs are huge
+Stan/
+Stan/detection_efficiency/
 
 # ignore the map files
 map_files/

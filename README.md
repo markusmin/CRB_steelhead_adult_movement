@@ -3,8 +3,9 @@ Workflow for using PIT tag detections to fit a multistate movement model to adul
 
 *last updated: 2025-05-07*
 
-Note: The data files are very large and therefore are not uploaded to GitHub. If you would like access to the data files, 
-please contact me directly or follow the instructions below to query PTAGIS and obtain the files.
+Note: Some files are not uploaded because they are very large. These include the raw data files are very large and the modeling outputs.
+For the raw data, please contact me directly or follow the instructions below to query PTAGIS and obtain the files. For
+the modeling outputs, please contact me directly or follow the steps below to fit the models.
 
 To reproduce this analysis, you must run the following scripts **sequentially**:
 
