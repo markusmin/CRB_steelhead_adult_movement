@@ -1,0 +1,223 @@
+"event_site_name","count","event_site_basin_name","event_site_subbasin_name","event_site_latitude","event_site_longitude","dam","dam_abbr"
+"158 - Fifteenmile Ck at Eightmile Ck",2,"Middle Columbia","Middle Columbia-Hood",45.606425,-121.08628,"in stream",NA
+"18N - 1890s Channel Methow River",1,"Upper Columbia","Methow",48.373079,-120.12264,"in stream",NA
+"ACB - Asotin Cr. at Cloverland Brdg.",83,"Lower Snake","Lower Snake-Asotin",46.325584,-117.108679,"in stream",NA
+"ACM - Asotin Creek near mouth",36,"Lower Snake","Lower Snake-Asotin",46.341368,-117.055707,"in stream",NA
+"AFC - No./So. Fk Asotin Cr. Jct. ISA",39,"Lower Snake","Lower Snake-Asotin",46.272487,-117.292147,"in stream",NA
+"ANT - Antoine Creek Instream Array",3,"Upper Columbia","Okanogan",48.758345,-119.40842,"in stream",NA
+"B2J - Bonneville PH2 Juvenile",56,"Lower Columbia","Lower Columbia-Sandy",45.636816,-121.9653,"in stream",NA
+"BBT - Touchet River at Bolles Bridge",25,"Middle Columbia","Walla Walla",46.2741,-118.220354,"in stream",NA
+"BCC - BON PH2 Corner Collector",315,"Lower Columbia","Lower Columbia-Sandy",45.64814,-121.942544,"in stream",NA
+"BCP - Butcher Creek Acclimation Pond",2,"Upper Columbia","Wenatchee",47.769549,-120.80235,"in stream",NA
+"BGM - Burlingame Dam and Canal",55,"Middle Columbia","Walla Walla",46.023149,-118.424443,"in stream",NA
+"BHC - Bohannon Creek Lemhi R Basin",2,"Salmon","Lemhi",45.112189,-113.746897,"in stream",NA
+"BMT - Big Meadow Temporary Array",1,"Upper Columbia","Wenatchee",47.867619,-120.696425,"in stream",NA
+"Bonneville Adult Fishways (combined)",29666,"Lower Columbia","Lower Columbia-Sandy",45.649788,-121.936531,"dam","BON"
+"BPC - Bonaparte Creek Instream Array",22,"Upper Columbia","Okanogan",48.704819,-119.445464,"in stream",NA
+"BR0 - Bridge Creek Gauge",25,"John Day","Lower John Day",44.72723,-120.3022,"in stream",NA
+"BR1 - Bridge Creek Kiosk",19,"John Day","Lower John Day",44.654323,-120.251131,"in stream",NA
+"BR2 - Bridge Creek Gable",52,"John Day","Lower John Day",44.59243,-120.2081,"in stream",NA
+"BR3 - Bridge Creek Ranch",17,"John Day","Lower John Day",44.58517,-120.1837,"in stream",NA
+"BSC - Big Sheep Creek ISA at km 6",88,"Lower Snake","Imnaha",45.506482,-116.850735,"in stream",NA
+"BVC - Beaver Creek, Methow River",29,"Upper Columbia","Methow",48.358155,-120.040412,"in stream",NA
+"CCA - Lower Charley Creek ISA",21,"Lower Snake","Lower Snake-Asotin",46.288458,-117.282497,"in stream",NA
+"CCT - Chikamin Creek Temporary Array",1,"Upper Columbia","Wenatchee",47.908611,-120.722258,"in stream",NA
+"CCW - Catherine Creek Ladder/Weir",4,"Lower Snake","Upper Grande Ronde",45.190964,-117.828617,"in stream",NA
+"CHL - Lower Chiwawa River",106,"Upper Columbia","Wenatchee",47.787548,-120.653864,"in stream",NA
+"CHM - Chumstick Creek",9,"Upper Columbia","Wenatchee",47.60485,-120.648606,"in stream",NA
+"CHU - Upper Chiwawa River",69,"Upper Columbia","Wenatchee",47.843795,-120.665435,"in stream",NA
+"CHW - Chiwaukum Creek",2,"Upper Columbia","Wenatchee",47.681436,-120.731185,"in stream",NA
+"CLC - Clear Creek near Kooskia NFH",1,"Clearwater","Middle Fork Clearwater",46.132739,-115.950184,"in stream",NA
+"CMP - Camp Creek at rkm 2 - Imnaha",2,"Lower Snake","Imnaha",45.551819,-116.866939,"in stream",NA
+"COC - Cow Creek ISA @ stream mouth",2,"Lower Snake","Imnaha",45.76774,-116.744037,"in stream",NA
+"CRT - Crooked River Satellite Fac.",1,"Clearwater","South Fork Clearwater",45.820931,-115.527782,"in stream",NA
+"CRU - Upper Chewuch Instream Array",5,"Upper Columbia","Methow",48.669459,-120.137058,"in stream",NA
+"CRW - Chewuch River above Winthrop",18,"Upper Columbia","Methow",48.482323,-120.18137,"in stream",NA
+"DBH - Buck Hollow Ck Deschutes Trib",1,"Deschutes","Lower Deschutes",45.262308,-121.023275,"in stream",NA
+"DRM - Deschutes River mouth",647,"Deschutes","Lower Deschutes",45.631808,-120.912483,"in stream",NA
+"DSF - Deschutes Sherars Falls",4,"Deschutes","Lower Deschutes",45.256897,-121.039616,"in stream",NA
+"DWL - Dworshak NFH adult trap",99,"Clearwater","Lower North Fork Clearwater",46.502652,-116.324263,"in stream",NA
+"EFD - East Fork Diversion Fishway",12,"Middle Columbia","Middle Columbia-Hood",45.509403,-121.56478,"in stream",NA
+"ENA - Upper Entiat River at rkm 17.1",19,"Upper Columbia","Upper Columbia-Entiat",47.736615,-120.362532,"in stream",NA
+"ENF - Upper Entiat River at rkm 40.6",39,"Upper Columbia","Upper Columbia-Entiat",47.901735,-120.466191,"in stream",NA
+"ENL - Lower Entiat River",172,"Upper Columbia","Upper Columbia-Entiat",47.663782,-120.24282,"in stream",NA
+"ENM - Middle Entiat River",95,"Upper Columbia","Upper Columbia-Entiat",47.797049,-120.403073,"in stream",NA
+"ENS - Upper Entiat River at rkm 35.7",9,"Upper Columbia","Upper Columbia-Entiat",47.856847,-120.422479,"in stream",NA
+"ESS - EFSF Salmon River at Parks Cr.",26,"Salmon","South Fork Salmon",44.956205,-115.53315,"in stream",NA
+"EWC - Early Winters Creek rkm 0.36",2,"Upper Columbia","Methow",48.599537,-120.442272,"in stream",NA
+"FDD - Feed Diversion Dam",18,"Middle Columbia","Umatilla",45.720695,-119.176819,"in stream",NA
+"GLC - Gold Creek, Methow River",20,"Upper Columbia","Methow",48.188368,-120.097128,"in stream",NA
+"GOA - Little Goose Fish Ladder",2165,"Lower Snake","Lower Snake-Tucannon",46.582668,-118.027794,"dam","LGO"
+"GOJ - Little Goose Dam Juvenile",196,"Lower Snake","Lower Snake-Tucannon",46.582381,-118.031607,"in stream",NA
+"GRJ - Lower Granite Dam Juvenile",201,"Lower Snake","Lower Snake-Tucannon",46.660394,-117.436261,"in stream",NA
+"HLM - Potlatch River near Helmer",1,"Clearwater","Clearwater",46.799006,-116.428412,"in stream",NA
+"HLX - Hemlock Dam Fish Ladder Exp.",69,"Middle Columbia","Middle Columbia-Hood",45.802154,-121.932144,"in stream",NA
+"HN1 - Top of Harrison side channel",1,"Upper Columbia","Upper Columbia-Entiat",47.669771,-120.294569,"in stream",NA
+"HN2 - Middle Harrison Side Channel",22,"Upper Columbia","Upper Columbia-Entiat",47.67044,-120.2912,"in stream",NA
+"HN3 - Bottom Harrison Side Channel",10,"Upper Columbia","Upper Columbia-Entiat",47.67061,-120.2899,"in stream",NA
+"HRM - Hood River Mouth",104,"Middle Columbia","Middle Columbia-Hood",45.713986,-121.508462,"in stream",NA
+"HS1 - Top of side channel near ENFH",12,"Upper Columbia","Upper Columbia-Entiat",47.69844,-120.32123,"in stream",NA
+"HS2 - Bottom side channel near ENFH",15,"Upper Columbia","Upper Columbia-Entiat",47.697967,-120.32204,"in stream",NA
+"HSL - Hancock Springs Lower",11,"Upper Columbia","Methow",48.531648,-120.324021,"in stream",NA
+"HST - Touchet River at Harvey Shaw",5,"Middle Columbia","Walla Walla",46.287439,-118.488939,"in stream",NA
+"HYC - Hayden Creek In-stream Array",104,"Salmon","Lemhi",44.861654,-113.631937,"in stream",NA
+"Ice Harbor Adult Fishways (combined)",9725,"Lower Snake","Lower Snake",46.249527,-118.879964,"dam","ICH"
+"ICL - Lower Icicle Instream Array",3,"Upper Columbia","Wenatchee",47.578648,-120.662589,"in stream",NA
+"IR1 - Lower Imnaha River ISA @ km 7",413,"Lower Snake","Imnaha",45.761052,-116.750231,"in stream",NA
+"IR2 - Lower Imnaha River ISA @ km 10",340,"Lower Snake","Imnaha",45.742702,-116.764304,"in stream",NA
+"IR3 - Upper Imnaha River ISA @ km 41",21,"Lower Snake","Imnaha",45.489957,-116.804096,"in stream",NA
+"JD1 - John Day River, McDonald Ferry",329,"John Day","Lower John Day",45.59574,-120.410928,"in stream",NA
+"JDJ - John Day Dam Juvenile",178,"Middle Columbia","Middle Columbia-Hood",45.710014,-120.692581,"in stream",NA
+"JOC - Joseph Creek ISA @ km 3",12,"Lower Snake","Lower Grande Ronde",46.030237,-117.016408,"in stream",NA
+"John Day Dam Adult Fishways (combined)",44,"Middle Columbia","Middle Columbia-Hood",45.718658,-120.697771,"dam","JDA"
+"John Day Dam Adult Fishways (combined)",44,"Middle Columbia","Middle Columbia-Hood",45.711138,-120.689427,"dam","JDA"
+"JUL - Potlatch River near Juliaetta",41,"Clearwater","Clearwater",46.565323,-116.709318,"in stream",NA
+"KCB - Kiwanis Camp Bridge, Mill C",1,"Middle Columbia","Walla Walla",45.998915,-118.113805,"in stream",NA
+"KEN - Kenney Creek In-stream Arrays",1,"Salmon","Lemhi",45.02703,-113.65801,"in stream",NA
+"KHS - Big Bear Cr. @ Kendrick HS",50,"Clearwater","Clearwater",46.619115,-116.646846,"in stream",NA
+"KRS - SF Salmon River at Krassel Cr.",29,"Salmon","South Fork Salmon",44.978472,-115.726994,"in stream",NA
+"LAP - Lapwai Creek, near its mouth",56,"Clearwater","Clearwater",46.443273,-116.812535,"in stream",NA
+"LBC - Libby Creek, Methow River",4,"Upper Columbia","Methow",48.23025,-120.117672,"in stream",NA
+"LBT - Little Bridge Creek (Twisp R.)",5,"Upper Columbia","Methow",48.38075,-120.2867,"in stream",NA
+"LC1 - Lower Lolo Creek at rkm 21",11,"Clearwater","Clearwater",46.29436,-115.97616,"in stream",NA
+"LC2 - Upper Lolo Creek at rkm 25",6,"Clearwater","Clearwater",46.290498,-115.933747,"in stream",NA
+"LFF - Lyle Falls Fishway",4,"Middle Columbia","Klickitat",45.716414,-121.259747,"in stream",NA
+"LLC - Loup Loup Creek Instream Array",2,"Upper Columbia","Okanogan",48.283501,-119.70824,"in stream",NA
+"LLR - Lower Lemhi River",107,"Salmon","Lemhi",45.176475,-113.885278,"in stream",NA
+"LMA - Lower Monumental Adult Ladders",2237,"Lower Snake","Lower Snake",46.562564,-118.538249,"dam","LMO"
+"LMJ - Lower Monumental Dam Juvenile",129,"Lower Snake","Lower Snake",46.562954,-118.543164,"in stream",NA
+"LMR - Lower Methow River at Pateros",832,"Upper Columbia","Methow",48.054608,-119.928121,"in stream",NA
+"LMT - Lower Mainstem Teanaway River",2,"Yakima","Upper Yakima",47.170655,-120.834851,"in stream",NA
+"LNR - Lower Naches River",4,"Yakima","Naches",46.631484,-120.578716,"in stream",NA
+"LOR - Lost River at rkm 0.81",2,"Upper Columbia","Methow",48.655382,-120.505688,"in stream",NA
+"Lower Granite Dam Adult Fishways (combined)",9698,"Lower Snake","Lower Snake-Tucannon",46.65776,-117.433225,"dam","LGR"
+"LRL - Lower Lochsa River Array Site",8,"Clearwater","Lochsa",46.145727,-115.596497,"in stream",NA
+"LRU - Lochsa River Upper Site",7,"Clearwater","Lochsa",46.163821,-115.589663,"in stream",NA
+"LRW - Lemhi River Weir",38,"Salmon","Lemhi",44.86596,-113.624721,"in stream",NA
+"LTP - Lower Twisp Acclimation Pond",1,"Upper Columbia","Methow",48.36646,-120.139009,"in stream",NA
+"LTR - Lower Tucannon River",1162,"Lower Snake","Lower Snake-Tucannon",46.544192,-118.162901,"in stream",NA
+"LWD - Lowden Diversion Dam",4,"Middle Columbia","Walla Walla",46.043121,-118.525822,"in stream",NA
+"LWE - Lower Wenatchee River",35,"Upper Columbia","Wenatchee",47.464893,-120.350162,"in stream",NA
+"LWL - Ltl. White Salmon NFH returns",2,"Middle Columbia","Middle Columbia-Hood",45.721799,-121.640678,"in stream",NA
+"LWN - Little Wenatchee River",3,"Upper Columbia","Wenatchee",47.834251,-120.838918,"in stream",NA
+"MAD - Mad River, Entiat River Basin",64,"Upper Columbia","Upper Columbia-Entiat",47.736851,-120.368739,"in stream",NA
+"MCD - Mill Creek Diversion Project",9,"Middle Columbia","Walla Walla",46.079843,-118.254402,"in stream",NA
+"MCJ - McNary Dam Juvenile",196,"Middle Columbia","Middle Columbia-Lake Wallula",45.932293,-119.2999,"in stream",NA
+"McNary Adult Fishways (combined)",18688,"Middle Columbia","Middle Columbia-Lake Wallula",45.939935,-119.299824,"dam","MCN"
+"MDR - McDonald Road Bridge",18,"Middle Columbia","Walla Walla",46.04787,-118.5548,"in stream",NA
+"MIS - Mission Creek",7,"Clearwater","Clearwater",46.367062,-116.735597,"in stream",NA
+"MJ1 - Middle Fork John Day Array",10,"John Day","Middle Fork John Day",44.741933,-118.851057,"in stream",NA
+"MRB - Methow River Basin",167,"Upper Columbia","Methow",48.3148,-120.0883,"in stream",NA
+"MRC - Methow River at Carlton",83,"Upper Columbia","Methow",48.246996,-120.118464,"in stream",NA
+"MRT - Methow River at Twisp",12,"Upper Columbia","Methow",48.374112,-120.121573,"in stream",NA
+"MRW - Methow River at Winthrop",23,"Upper Columbia","Methow",48.487797,-120.228681,"in stream",NA
+"MSH - Methow Fish Hatchery Outfall",8,"Upper Columbia","Methow",48.476747,-120.204967,"in stream",NA
+"MTD - Mill Creek at The Dalles",4,"Middle Columbia","Middle Columbia-Hood",45.595413,-121.204525,"in stream",NA
+"MTR - Middle Tucannon River",72,"Lower Snake","Lower Snake-Tucannon",46.505239,-118.016274,"in stream",NA
+"MWC - Maxwell Canal",14,"Middle Columbia","Umatilla",45.799487,-119.341847,"in stream",NA
+"MWE - Middle Wenatchee River",11,"Upper Columbia","Wenatchee",47.623026,-120.726203,"in stream",NA
+"MWF - Whitefish SC in Methow River",44,"Upper Columbia","Methow",48.446048,-120.160572,"in stream",NA
+"NAL - Lower Nason Creek",63,"Upper Columbia","Wenatchee",47.802494,-120.713574,"in stream",NA
+"NAU - Upper Nason Creek",173,"Upper Columbia","Wenatchee",47.785981,-120.848546,"in stream",NA
+"NBA - Nursery Bridge Adult",35,"Middle Columbia","Walla Walla",45.945399,-118.384451,"in stream",NA
+"NFS - North Fork Salmon River",1,"Salmon","Middle Salmon-Panther",45.408645,-113.992002,"in stream",NA
+"NMC - Ninemile Creek Instream Array",1,"Upper Columbia","Okanogan",48.970542,-119.418187,"in stream",NA
+"OKC - Okanagan Channel at VDS-3",2,"Upper Columbia","Okanogan",49.114113,-119.565753,"in stream",NA
+"OKI - Inkaneep Creek ",1,"Upper Columbia","Okanogan",49.078005,-119.502007,"in stream",NA
+"OKL - Lower Okanogan Instream Array",44,"Upper Columbia","Okanogan",48.26871,-119.728135,"in stream",NA
+"OMK - Omak Creek Instream Array",156,"Upper Columbia","Okanogan",48.405363,-119.50143,"in stream",NA
+"ORB - Oasis Road Bridge",237,"Middle Columbia","Walla Walla",46.072797,-118.816734,"in stream",NA
+"PAT - Pattit Creek Instream Site",3,"Middle Columbia","Walla Walla",46.327536,-117.974028,"in stream",NA
+"PCM - Pine Creek Mouth, Potlatch R.",2,"Clearwater","Clearwater",46.630673,-116.596836,"in stream",NA
+"PES - Peshastin Creek",11,"Upper Columbia","Wenatchee",47.548491,-120.609887,"in stream",NA
+"Priest Rapids Adult Fishways (combined)",6725,"Upper Columbia","Upper Columbia-Priest Rapids",46.644339,-119.910442,"dam","PRA"
+"PRO - Prosser Diversion Dam Combined",137,"Yakima","Lower Yakima",46.212539,-119.772663,"in stream",NA
+"PRV - Walla Walla R at Pierce RV Prk",56,"Middle Columbia","Walla Walla",46.068014,-118.825796,"in stream",NA
+"RCJ - Rock Creek John Day Basin",7,"John Day","Lower John Day",45.57559,-120.37988,"in stream",NA
+"RCL - Rock Creek (WA) at rkm 5",3,"Middle Columbia","Middle Columbia-Lake Wallula",45.73785,-120.432964,"in stream",NA
+"RCS - Rock Creek (WA) at rkm 14",7,"Middle Columbia","Middle Columbia-Lake Wallula",45.795091,-120.464524,"in stream",NA
+"RCT - Roaring Creek Temporary Array",3,"Upper Columbia","Upper Columbia-Entiat",47.689304,-120.32198,"in stream",NA
+"Rock Island Adult Fishways (combined)",5588,"Upper Columbia","Upper Columbia-Entiat",47.343278,-120.0933,"dam","RIS"
+"ROZ - Roza Diversion Dam (Combined)",22,"Yakima","Upper Yakima",46.749064,-120.465766,"in stream",NA
+"RRF - Rocky Reach Fishway",4460,"Upper Columbia","Upper Columbia-Entiat",47.531519,-120.300387,"dam","RRE"
+"RRJ - Rocky Reach Dam Juvenile",169,"Upper Columbia","Upper Columbia-Entiat",47.531967,-120.299618,"in stream",NA
+"RZF - Roza Dam Fishway",20,"Yakima","Upper Yakima",46.74882,-120.465031,"in stream",NA
+"SA1 - Salmon Creek Instream Array",4,"Upper Columbia","Okanogan",48.378992,-119.590647,"in stream",NA
+"SAT - Lower Satus Creek",2,"Yakima","Lower Yakima",46.275188,-120.137698,"in stream",NA
+"SC1 - Lower SF Clearwater R at rkm 1",27,"Clearwater","South Fork Clearwater",46.137022,-115.981313,"in stream",NA
+"SC2 - Lower SF Clearwater R at rkm 2",9,"Clearwater","South Fork Clearwater",46.127209,-115.97776,"in stream",NA
+"SCP - Spring Creek Acclimation Pond",252,"Upper Columbia","Methow",48.474775,-120.185131,"in stream",NA
+"SFG - SF Salmon at Guard Station Br.",54,"Salmon","South Fork Salmon",45.175659,-115.579712,"in stream",NA
+"SFL - Shipherd Falls Ladder",346,"Middle Columbia","Middle Columbia-Hood",45.737978,-121.805784,"in stream",NA
+"SHK - Shitike Creek PIT Array",3,"Deschutes","Lower Deschutes",44.764941,-121.243566,"in stream",NA
+"SJ1 - SF John Day (Mid)",25,"John Day","Upper John Day",44.422105,-119.540665,"in stream",NA
+"SJ2 - SF John Day (Murderer's)",31,"John Day","Upper John Day",44.314517,-119.539748,"in stream",NA
+"STL - Sawtooth Hatchery Adult Trap",194,"Salmon","Upper Salmon",44.153369,-114.883772,"in stream",NA
+"SUN - Sunnyside Instream Array",7,"Yakima","Lower Yakima",46.496865,-120.442428,"in stream",NA
+"SWT - Sweetwater Cr. near its mouth",24,"Clearwater","Clearwater",46.369217,-116.795757,"in stream",NA
+"TAN - Taneum Creek Instream",3,"Yakima","Upper Yakima",47.091769,-120.709136,"in stream",NA
+"TAY - Big Creek at Taylor Ranch",31,"Salmon","Lower Middle Fork Salmon",45.103947,-114.850008,"in stream",NA
+"TC4 - Trout Creek at 43 Road Bridge",19,"Middle Columbia","Middle Columbia-Hood",45.822305,-122.016555,"in stream",NA
+"TCT - Tronsen Creek Temporary Array",1,"Upper Columbia","Wenatchee",47.397613,-120.651821,"in stream",NA
+"TFH - Tucannon Fish Hatchery",52,"Lower Snake","Lower Snake-Tucannon",46.309627,-117.657161,"in stream",NA
+"The Dalles Adult Fishways (combined)",3656,"Middle Columbia","Middle Columbia-Hood",45.619099,-121.119685,"dam","TDA"
+"TLT - Tillicum Creek Temporary Array",1,"Upper Columbia","Upper Columbia-Entiat",47.747434,-120.396699,"in stream",NA
+"TMA - 3-Mile Falls Dam Adult Fishway",3,"Middle Columbia","Umatilla",45.882124,-119.323066,"in stream",NA
+"TMF - Three Mile Falls Dam Combined",128,"Middle Columbia","Umatilla",45.882018,-119.32442,"in stream",NA
+"TMJ - 3-Mile Falls Dam Smolt Bypass",1,"Middle Columbia","Umatilla",45.882307,-119.325853,"in stream",NA
+"TNK - Tunk Creek Instream Array",11,"Upper Columbia","Okanogan",48.561704,-119.485841,"in stream",NA
+"TOP - Lower Toppenish Creek",16,"Yakima","Lower Yakima",46.319264,-120.181823,"in stream",NA
+"TP2 - Toppenish Creek at Simcoe Ck",4,"Yakima","Lower Yakima",46.378401,-120.622581,"in stream",NA
+"TRC - Trout Creek, Wind River",104,"Middle Columbia","Middle Columbia-Hood",45.803735,-121.937104,"in stream",NA
+"TUF - Tumwater Dam Adult Fishway",801,"Upper Columbia","Wenatchee",47.616998,-120.722948,"in stream",NA
+"TWR - Lwr Twisp Rvr near MSRF Ponds",98,"Upper Columbia","Methow",48.367135,-120.13833,"in stream",NA
+"TWX - Estuary Towed Array (Exp.)",23,"Lower Columbia","Lower Columbia-Clatskanie",46.142688,-123.335061,"in stream",NA
+"UCT - Upper Chiwawa Temporary Array",12,"Upper Columbia","Wenatchee",47.936156,-120.755397,"in stream",NA
+"UGR - Upper Grande Ronde at rkm 155",15,"Lower Snake","Upper Grande Ronde",45.59352,-117.903379,"in stream",NA
+"UM1 - Umatilla River USFWS",2,"Middle Columbia","Umatilla",45.726045,-118.187571,"in stream",NA
+"UM2 - Umatilla River Instream Array",13,"Middle Columbia","Umatilla",45.712494,-118.345278,"in stream",NA
+"UPT - Upper Peshastin Temporary Arr.",4,"Upper Columbia","Wenatchee",47.397549,-120.65269,"in stream",NA
+"USE - Upper Salmon River at rkm 437",281,"Salmon","Middle Salmon-Panther",45.02853,-113.916319,"in stream",NA
+"USI - Upper Salmon River at rkm 460",113,"Salmon","Middle Salmon-Panther",44.889763,-113.964145,"in stream",NA
+"UTR - Upper Tucannon River",72,"Lower Snake","Lower Snake-Tucannon",46.415922,-117.738342,"in stream",NA
+"UWE - Upper Wenatchee River",20,"Upper Columbia","Wenatchee",47.796433,-120.663611,"in stream",NA
+"VC1 - Valley Creek, Upstream Site",28,"Salmon","Upper Salmon",44.218672,-114.94215,"in stream",NA
+"VC2 - Valley Creek, Downstream Site",11,"Salmon","Upper Salmon",44.2219,-114.93146,"in stream",NA
+"WEB - Webb Creek",3,"Clearwater","Clearwater",46.325992,-116.831974,"in stream",NA
+"WEJ - Wells Dam Bypass Bay Sample",3,"Upper Columbia","Chief Joseph",47.946712,-119.866469,"in stream",NA
+"Wells Dam Adult Fishways (combined)",5493,"Upper Columbia","Chief Joseph",47.947302,-119.864549,"dam","WEL"
+"WFC - Wolf Creek, Methow River",5,"Upper Columbia","Methow",48.488625,-120.234267,"in stream",NA
+"WHS - Wildhorse Spring Creek",5,"Upper Columbia","Okanogan",48.857063,-119.407315,"in stream",NA
+"WR1 - Wallowa River at river km 14",24,"Lower Snake","Wallowa",45.633679,-117.733757,"in stream",NA
+"WRU - Upper Wind River (WA) rkm 30",12,"Middle Columbia","Middle Columbia-Hood",45.863379,-121.967782,"in stream",NA
+"WSH - Warm Springs Hatchery",34,"Deschutes","Lower Deschutes",44.860729,-121.245123,"in stream",NA
+"WSR - Warm Springs River PIT Array",3,"Deschutes","Lower Deschutes",44.859752,-121.068348,"in stream",NA
+"WTL - White River, Wenatchee Basin",7,"Upper Columbia","Wenatchee",47.845936,-120.831626,"in stream",NA
+"WW1 - Harris Bridge S F Walla Walla",8,"Middle Columbia","Walla Walla",45.83676,-118.182603,"in stream",NA
+"WW2 - SF Walla Walla at Bear Creek",2,"Middle Columbia","Walla Walla",45.84417,-118.104691,"in stream",NA
+"YFK - Yankee Fork Salmon River",43,"Salmon","Upper Salmon",44.287737,-114.720453,"in stream",NA
+"YHC - Yellowhawk Creek",2,"Middle Columbia","Walla Walla",46.074979,-118.273783,"in stream",NA
+"ZEN - Secesh River at Zena Cr. Ranch",36,"Salmon","South Fork Salmon",45.0333,-115.73302,"in stream",NA
+"ZSL - Zosel Dam Combined",11,"Upper Columbia","Okanogan",48.933499,-119.419812,"in stream",NA
+"BADGEI - Badger Island, Columbia River",1,NA,NA,NA,NA,"in stream",NA
+"BRIDGC - Bridge Creek, John Day River Basin",21,NA,NA,NA,NA,"in stream",NA
+"CATHEC - Catherine Creek",7,NA,NA,NA,NA,"in stream",NA
+"CATHEW - Catherine Creek Weir",13,NA,NA,NA,NA,"in stream",NA
+"COLR4 - Columbia River - Bonneville Dam to John Day Dam (km 234-347)",10,NA,NA,NA,NA,"in stream",NA
+"CRC - Carmen Creek, Salmon R. Basin",2,NA,NA,NA,NA,"in stream",NA
+"ESANIS - East Sand Island, Columbia River",1,NA,NA,NA,NA,"in stream",NA
+"GRAND2 - Grande Ronde River - Wallowa River to headwaters (km 131-325)",3,NA,NA,NA,NA,"in stream",NA
+"ICH - Ice Harbor Dam (Combined)",317,NA,NA,NA,NA,"in stream",NA
+"JDARSF - South Fork John Day River",2,NA,NA,NA,NA,"in stream",NA
+"LAPC - Lapwai Creek",1,NA,NA,NA,NA,"in stream",NA
+"LGRTAL - LGR - Release into the Tailrace within 0.5 km downstream of Dam",1,NA,NA,NA,NA,"in stream",NA
+"LOOKGC - Lookingglass Creek",1,NA,NA,NA,NA,"in stream",NA
+"MXWLCN - Maxwell Diversion Canal - headgate to diversion screen (km 000-002)",1,NA,NA,NA,NA,"in stream",NA
+"PAHH - Pahsimeroi Hatchery",1,NA,NA,NA,NA,"in stream",NA
+"PRA - Priest Rapids Adult",24,NA,NA,NA,NA,"in stream",NA
+"RIA - Rock Island Adult",7,NA,NA,NA,NA,"in stream",NA
+"SHERFT - Sherars Falls Fishway Trap, Deschutes River",3,NA,NA,NA,NA,"in stream",NA
+"TROU2C - Trout Creek, Deschutes River Watershed",1,NA,NA,NA,NA,"in stream",NA
+"TUCR - Tucannon River",1,NA,NA,NA,NA,"in stream",NA
+"WEA - Wells Dam, DCPUD Adult Ladders",1,NA,NA,NA,NA,"in stream",NA
+"WHITEC - White Creek, Klickitat River Basin",1,NA,NA,NA,NA,"in stream",NA
