@@ -10,3 +10,11 @@ Data/PTAGIS_queries/BON_sthd_2005-06-01_2025_01_23.csv
 
 # ignore the map files
 map_files/
+
+# ignore scripts that are used to generate figures that are not in the paper
+R/07_model_analysis/07-05.1_presentation_temperature_effects_plots.R
+R/07_model_analysis/07-06.1_presentation_spilldays_effects_plots.R
+
+# ignore scripts that were used to explore data
+R/10_data_summaries.R
+R/11_miscellaneous_analyses.R
