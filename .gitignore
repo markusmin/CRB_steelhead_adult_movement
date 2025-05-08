@@ -18,3 +18,25 @@ R/07_model_analysis/07-06.1_presentation_spilldays_effects_plots.R
 # ignore scripts that were used to explore data
 R/10_data_summaries.R
 R/11_miscellaneous_analyses.R
+
+### ignore all figures that are not in manuscript or supplements
+
+# ignore almost all alternative_spill_treatment explorations
+figures/alternative_spill_treatment/data_plots/
+figures/alternative_spill_treatment/diagnostic_plots/
+figures/alternative_spill_treatment/final_fates/
+figures/alternative_spill_treatment/final_fates_scenarios/
+figures/alternative_spill_treatment/spilldays/
+figures/alternative_spill_treatment/spilldays/temperature_effects/
+
+# ignore data plots
+figures/data_plots/
+
+# ignore presentation figures
+figures/presentation/
+
+# ignore random figures
+figures/spilldays_effects/
+figures/temperature_effects/
+figures/year_effects/
+
