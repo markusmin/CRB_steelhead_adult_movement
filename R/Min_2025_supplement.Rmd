@@ -3,15 +3,14 @@ title: "Supplemental Material"
 author: "Markus A. Min, Rebecca A. Buchanan, and Mark D. Scheuerell"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    toc: true
-    toc_depth: '3'
   html_document:
     toc: true
     toc_float: true
     toc_depth: 3
-subtitle: Modeling climate and hydropower influences on movement ecology to inform
-  management of an anadromous species
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+subtitle: Modeling climate and hydropower influences on the movement decisions of an anadromous species
 ---
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
