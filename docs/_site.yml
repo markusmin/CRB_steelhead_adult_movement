@@ -1,7 +1,0 @@
-name: "Modeling climate and hydropower influences on the movement decisions of an anadromous species"
-output_dir: "."
-
-output:
-  html_document:
-    theme: flatly
-    toc: FALSE
