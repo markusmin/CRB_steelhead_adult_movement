@@ -11,6 +11,8 @@ output:
     toc: true
     toc_depth: '3'
 subtitle: Modeling climate and hydropower influences on the movement decisions of an anadromous species
+bibliography: Steelhead.bib
+csl: ecology.csl
 ---
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -18,17 +20,20 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(tidyverse)
 library(here)
 library(kableExtra)
+library(ggthemes)
+library(viridis)
+library(ggpubr)
 ```
 
 ## Supplemental Methods
 
 ### 1 Tributary detection efficiency
 
-Detection efficiency at the in-stream PIT tag array closest to the mouth of the tributary (the confluence of the tributary with the mainstem Columbia or Snake River) was estimated for each tributary state. However, detection efficiency was not modeled for three tributaries of the Snake River (the Salmon River, the Grande Ronde River, and the Clearwater River), as these tributaries did not have a detection site on the mainstem of the tributary within 100 km of the confluence.
+Detection efficiency at the in-stream PIT tag array closest to the mouth of the tributary (the confluence of the tributary with the mainstem Columbia or Snake River) was estimated for each tributary state. However, detection efficiency was not modeled for three tributaries of the Snake River (the Salmon River, the Grande Ronde River, and the Clearwater River), as these tributaries did not have a detection site on the mainstem of the tributary within 100 km of the confluence. The data used to estimate detection efficiency at the river mouth sites was detections at the river mouth site and detections anywhere upstream of the river mouth site. In this analysis, we only included fish that were detected at a river mouth site, and then used a binary indicator to record if those fish were also detected at the river mouth site.
 
-We modeled detection efficiency in tributaries using logistic regression based on two predictors: 1) changes in antenna configurations over time, and 2) the discharge in the tributary. Changes in antenna configurations were identified from the operational history of the site, based on antennas being installed, decommissioned, upgraded, or moved. Changes in antenna configurations are identified in Table S1. Discharge was included as a predictor based on our hypothesis that river stage would influence the antenna coverage of the river channel. Discharge data were queried from USGS by finding the station on the interactive USGS dashboard closest the river mouth array and navigating to the data page for the specific site. Discharge data were available for all tributaries except Fifteenmile Creek and the Imnaha River; detection efficiency in these tributaries was therefore only modeled as a function of antenna configurations.
+We modeled detection efficiency in tributaries using logistic regression based on two predictors: 1) changes in antenna configurations over time, and 2) the discharge in the tributary. Changes in antenna configurations were identified from the operational history of the site, based on antennas being installed, decommissioned, upgraded, or moved. Changes in antenna configurations are identified in Table S1. Discharge was included as a predictor based on our hypothesis that river stage would influence the antenna coverage of the river channel. Discharge data were queried from USGS by finding the station on the interactive USGS dashboard closest the river mouth array and navigating to the data page for the specific site. Discharge data were available for all tributaries except Fifteenmile Creek and the Imnaha River; detection efficiency in these tributaries was therefore only modeled as a function of antenna configurations. We processed discharge data for inclusion in the model by taking the mean discharge across the run year.
 
-Table S1: Tributary PIT tag antenna configurations used in detection efficiency estimation. Years refer to the Steelhead run years in which the site was active in a specific configuration. Site refers to the PIT tag detection site chosen for the detection efficiency estimation, based on its proximity to the mouth of the tributary. Configuration refers to the configuration of antennas at the site, where Initial is the name given to the antenna configuration at the site at the start of the time series, and any subsequent changes from the initial configuration at the site are noted in this column.
+*Table S1: Tributary PIT tag antenna configurations used in detection efficiency estimation. Years refer to the Steelhead run years in which the site was active in a specific configuration. Site refers to the PIT tag detection site chosen for the detection efficiency estimation, based on its proximity to the mouth of the tributary. Configuration refers to the configuration of antennas at the site, where Initial is the name given to the antenna configuration at the site at the start of the time series, and any subsequent changes from the initial configuration at the site are noted in this column.*
 
 | Tributary | Years |	Site | Configuration |
 |:----|:----|:----|:----|
@@ -54,7 +59,7 @@ Table S1: Tributary PIT tag antenna configurations used in detection efficiency 
 | Asotin Creek	 | 18/19-21/22 | 	Asotin Creek Mouth (ACM) | 	All components replaced and upgraded |
 | Imnaha River	 | 10/11-21/22 | 	Lower Imnaha River ISA @ km 7 (IR1)	| Initial |
 
-For our model of detection efficiency, we denote $z_i$ as the detection of fish $i$, $p_det$ as the probability of detection for fish $i$, $\alpha_{j,k}$ as the antenna configuration for tributary $j$ under configuration $k$, $\beta_j$ as the slope for the effect of discharge, and $x_{j,t}$ as the mean discharge for tributary $j$ in year $t$. The model for detection efficiency was as follows:
+For our model of detection efficiency, we denote $z_i$ as the detection of a fish that was detected at an upstream site $i$ at the river mouth site, $p_det$ as the probability of detection for fish $i$, $\alpha_{j,k}$ as the antenna configuration for tributary $j$ under configuration $k$, $\beta_j$ as the slope for the effect of discharge, and $x_{j,t}$ as the mean discharge for tributary $j$ in year $t$. The model for detection efficiency was as follows:
 
 $$
 z_i \sim Bernoulli(p_{det,i}) \\
@@ -70,10 +75,154 @@ The above model was implemented in Stan (Carpenter et al., 2017), with 3 chains 
 #### Temperature data
 Due to the noise and gaps inherent to the temperature data, a series of steps were performed to clean this data. First, plots of temperature were manually inspected and sequential runs of temperature points that were outside of the range of possible values for that time of year were removed. Next, a filtering algorithm was applied to remove any temperature values that were more than four degrees outside of the interannual average temperature value for that day of the year, as well as any values that were more than two degrees outside of the 7-day moving average. To address the incomplete temporal resolution for temperature at each dam in our modeling framework, a state-space model was fit using the MARSS package (Holmes et al., 2014). The inputs for this model were the cleaned temperature data at the forebay and tailrace for the eight dams (a total of 16 temperature time series). The model was structured with only a single process (the basin-scale temperature) and 16 observations of that process. Each dam had a different offset/bias term (8 total). Model-estimated temperatures on each day for each dam were then exported by using the estimate of the basin-scale temperature plus the dam-specific offset.
 
-To estimate the temperatures experienced by fish, the median residence time in each state in our model was first calculated. To do so, we calculated the difference between the date on which a fish was observed exiting a state and the date on which a fish was observed entering a state, and then computed the state-specific median across all fish. However, for the two furthest upstream states (upstream of Lower Granite Dam and upstream of Wells Dam), residence times were significantly longer and were found to be bimodal. Based on our hypothesis that movement decisions are made soon after a fish enters a state, we fit a two-component mixture model using the mixtools package in R (Benaglia et al., 2010) to residence times in these states and used the median residence time for fish in the first mode. The mean temperature experienced by the fish while in a state was estimated as the mean temperature across a window of time defined as the date a fish was observed entering a state plus the median residence time for all fish in that state. 
+To estimate the temperatures experienced by fish, the median residence time in each state in our model was first calculated. To do so, we calculated the difference between the date on which a fish was observed exiting a state and the date on which a fish was observed entering a state, and then computed the state-specific median across all fish. However, for the two furthest upstream states (upstream of Lower Granite Dam and upstream of Wells Dam), residence times were significantly longer and were found to be bimodal. These furthest upstream states are also observed to have more variability in median residence times because of their position in the PIT tag array network (see plots below). Based on our hypothesis that movement decisions are made soon after a fish enters a state, we fit a two-component mixture model using the mixtools package in R (Benaglia et al., 2010) to residence times in these states and used the median residence time for fish in the first mode. The mean temperature experienced by the fish while in a state was estimated as the mean temperature across a window of time defined as the date a fish was observed entering a state plus the median residence time for all fish in that state. 
 
 #### Spill data
 Daily average spill (in thousands of cubic feet per second) was queried from the Columbia Basin Conditions portal from the DART page for the eight dams that were modeled as the boundaries of states (Bonneville, McNary, Priest Rapids, Rock Island, Rocky Reach, Wells, Ice Harbor, and Lower Granite). Spill data were processed in two different ways to facilitate the inclusion of two hypothesized relationships between spill and fish fallback over dams. For en-route fallback, spill volume was processed in the same way as temperature: by taking the mean volume of spill across the residence time window. For post-overshoot fallback, spill volume was converted into days of winter spill, by counting the number of days that had nonzero spill in the months of January, February, and March for each year.
+
+Residence time was calculated across all fish and all years. Variability in residence time by year (visualized below as the median residence time by year with the error bars showing the 95% interquantile range) was generally not significant. Furthermore, dividing up the dataset by year would have led to very small sample sizes in some years, leading to an unrepresentative residence time.
+
+
+```{r residence_time_plots, fig.dim = c(8,6)}
+## Load fish movement data to calculate windows
+snake_adults_states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", "snake_adults_states_complete.csv"))
+midcol_adults_states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", "middle_columbia_adults_states_complete.csv"))
+uppcol_adults_states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", "upper_columbia_adults_states_complete.csv"))
+
+# combine all
+snake_adults_states_complete %>% 
+  bind_rows(., midcol_adults_states_complete) %>% 
+  bind_rows(., uppcol_adults_states_complete) -> ASC
+
+# now add tag code metadata, for natal origins
+origin_numeric <- data.frame(natal_origin = c("Asotin_Creek", 
+                                              "Clearwater_River",
+                                              "Deschutes_River", 
+                                              "Entiat_River", 
+                                              "Fifteenmile_Creek", 
+                                              "Grande_Ronde_River", 
+                                              "Imnaha_River",
+                                              "John_Day_River", 
+                                              "Methow_River", 
+                                              "Okanogan_River", 
+                                              "Salmon_River", 
+                                              "Tucannon_River", 
+                                              "Umatilla_River",
+                                              "Walla_Walla_River",
+                                              "Wenatchee_River", 
+                                              "Yakima_River"),
+                             natal_origin_numeric = seq(1,16,1))
+
+origin_rear_actual <- read.csv(here::here("Data", "covariate_data", "origin_rear_actual.csv"), row.names = 1)
+origin_rear_actual %>% 
+  dplyr::rename(natal_origin_numeric = natal_origin) %>% 
+  left_join(origin_numeric, by = "natal_origin_numeric") %>% 
+  dplyr::select(tag_code_2, natal_origin) -> tag_code_origins
+
+ASC %>% 
+  left_join(., tag_code_origins, by = "tag_code_2") -> ASC
+
+# also note which ESU they're from, for plotting
+ESU_origins <- data.frame(natal_origin = unique(ASC$natal_origin),
+                          ESU = c(rep("Snake", 6),
+                                  rep("Middle Columbia", 6),
+                                  rep("Upper Columbia", 4)))
+
+ASC %>% 
+  left_join(., ESU_origins, by = "natal_origin") -> ASC
+
+# explore how residence time changes by year
+residence_time <- function(residence_state){
+
+  # filter to the state of interest, but don't keep any with implicit time interpolated
+  ASC %>%
+    filter(state == residence_state & tag_code_2 == lead(tag_code_2) & pathway != "implicit" & lead(pathway) != "implicit" |
+             lag(state) == residence_state & tag_code_2 == lag(tag_code_2) & pathway != "implicit" & lag(pathway) != "implicit") %>%
+    mutate(date_time = ymd_hms(date_time)) -> one_state_df
+
+
+  # make a data frame to record all of the transitions
+  n_transitions <- nrow(one_state_df)/2
+  passage_df <- data.frame(tag_code_2 = one_state_df$tag_code_2[seq(1,(nrow(one_state_df)-1),2)],
+                           year = year(one_state_df$date_time[seq(1,(nrow(one_state_df)-1),2)]),
+                           ESU = one_state_df$ESU[seq(1,(nrow(one_state_df)-1),2)],
+                           natal_origin = one_state_df$natal_origin[seq(1,(nrow(one_state_df)-1),2)],
+                           passage_time = NA)
+
+
+  for (i in 1:nrow(passage_df)){
+    passage_df$passage_time[i] <- one_state_df$date_time[(i*2)] - one_state_df$date_time[(i*2-1)]
+
+  }
+
+  return(passage_df)
+
+}
+
+# explore residence time by DPS, year, and state
+main_mainstem_states <- c(
+  "mainstem, BON to MCN",
+  "mainstem, MCN to ICH or PRA",
+  "mainstem, PRA to RIS",
+  "mainstem, RIS to RRE",
+  "mainstem, RRE to WEL",
+  "mainstem, ICH to LGR",
+  "mainstem, upstream of WEL",
+  "mainstem, upstream of LGR")
+
+plot_residence_time_state_year <- function(state){
+  passage_df <- residence_time(residence_state = state)
+  
+  # create summary table by year
+  passage_df %>% 
+    group_by(year) %>% 
+    summarise(passage_time = quantile(passage_time, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975)) %>% 
+    pivot_wider(., values_from = passage_time, names_from = q) %>% 
+    filter(year <= 2023) -> passage_year_sum
+  
+  # plot residence time
+  plot <- ggplot(passage_year_sum, aes(x = year, y = `0.5`, ymin = `0.025`, ymax = `0.975`)) +
+    geom_point() +
+    geom_errorbar() +
+    ggtitle(state) +
+    scale_x_continuous(breaks = c(2005, 2010, 2015, 2020)) +
+    ylab("Residence Time")
+  
+  # plot sample sizes by year
+  passage_df %>% 
+    group_by(year) %>% 
+    summarise(total = n()) %>% 
+    filter(year <= 2023) -> passage_sample_sizes
+  
+  sample_size_plot <- ggplot(passage_sample_sizes, aes(x = year, y = total)) +
+    geom_bar(stat = "identity") +
+    scale_x_continuous(breaks = c(2005, 2010, 2015, 2020))
+  
+  final_plot <- ggarrange(plot, sample_size_plot, nrow = 2)
+  
+  return(final_plot)
+}
+
+BON_MCN_plot <- plot_residence_time_state_year(state = main_mainstem_states[1])
+MCN_ICH_PRA_plot <- plot_residence_time_state_year(state = main_mainstem_states[2])
+PRA_RIS_plot <- plot_residence_time_state_year(state = main_mainstem_states[3])
+RIS_RRE_plot <- plot_residence_time_state_year(state = main_mainstem_states[4])
+RRE_WEL_plot <- plot_residence_time_state_year(state = main_mainstem_states[5])
+ICH_LGR_plot <- plot_residence_time_state_year(state = main_mainstem_states[6])
+upstream_WEL_plot <- plot_residence_time_state_year(state = main_mainstem_states[7])
+upstream_LGR_plot <- plot_residence_time_state_year(state = main_mainstem_states[8])
+
+BON_MCN_plot
+MCN_ICH_PRA_plot
+PRA_RIS_plot
+RIS_RRE_plot
+RRE_WEL_plot
+ICH_LGR_plot
+upstream_WEL_plot
+upstream_LGR_plot
+```
+
+
 
 
 ## Supplemental Results
@@ -320,7 +469,10 @@ sample_size_table %>%
 
 
 
-### 2 Covariate correlations {.tabset .tabset-pills}
+
+### 2 Covariate data summaries {.tabset .tabset-pills}
+
+In this section, we present summaries of the three basin condition covariates incorporated in this model: temperature, spill volume, and number of winter spill days. We first present summary tables that show the differences in these covariates by run year and by dam, and then present figures that show the fine-scale details in these trends by dam and across year. 
 
 ```{r}
 #### Define functions ####
@@ -613,10 +765,305 @@ LGR_temp_mod %>%
   rowwise() %>%
   dplyr::mutate(run_year = subset(run_year_df, run_year_start <= date & run_year_end >= date)$run_year) -> LGR_cov
 
+#### Visualize variation in covariate conditions ####
+
+# to facilitate visual comparison, add plotting date to each dam's df
+add_plotting_date <- function(data) {
+  data %>% 
+    mutate(month_day = format(as.Date(date), "%m-%d")) %>% 
+    mutate(plotting_year = ifelse(month(date) < 6, 2000, 1999)) %>% 
+    mutate(plotting_date = ymd(paste0(plotting_year, "-", month_day))) -> data
+  return(data)
+}
+
+BON_cov <- add_plotting_date(BON_cov)
+MCN_cov <- add_plotting_date(MCN_cov)
+PRA_cov <- add_plotting_date(PRA_cov)
+RIS_cov <- add_plotting_date(RIS_cov)
+RRE_cov <- add_plotting_date(RRE_cov)
+WEL_cov <- add_plotting_date(WEL_cov)
+ICH_cov <- add_plotting_date(ICH_cov)
+LGR_cov <- add_plotting_date(LGR_cov)
 
 
 
+### summarize average conditions at each dam by run year in a big table ###
+# temperature
+BON_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(BON = mean(temp)) -> BON_temp_summary
 
+MCN_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(MCN = mean(temp)) -> MCN_temp_summary
+
+PRA_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(PRA = mean(temp)) -> PRA_temp_summary
+
+RIS_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(RIS = mean(temp)) -> RIS_temp_summary
+
+RRE_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(RRE = mean(temp)) -> RRE_temp_summary
+
+WEL_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(WEL = mean(temp)) -> WEL_temp_summary
+
+ICH_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(ICH = mean(temp)) -> ICH_temp_summary
+
+LGR_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(LGR = mean(temp)) -> LGR_temp_summary
+
+
+BON_temp_summary %>% 
+  left_join(., MCN_temp_summary, by = "run_year") %>% 
+  left_join(., PRA_temp_summary, by = "run_year") %>% 
+  left_join(., RIS_temp_summary, by = "run_year") %>% 
+  left_join(., RRE_temp_summary, by = "run_year") %>% 
+  left_join(., WEL_temp_summary, by = "run_year") %>% 
+  left_join(., ICH_temp_summary, by = "run_year") %>% 
+  left_join(., LGR_temp_summary, by = "run_year") -> all_dams_temp_table
+
+
+
+# spill volume
+BON_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(BON = mean(spill)) -> BON_spill_summary
+
+MCN_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(MCN = mean(spill)) -> MCN_spill_summary
+
+PRA_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(PRA = mean(spill)) -> PRA_spill_summary
+
+RIS_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(RIS = mean(spill)) -> RIS_spill_summary
+
+RRE_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(RRE = mean(spill)) -> RRE_spill_summary
+
+WEL_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(WEL = mean(spill)) -> WEL_spill_summary
+
+ICH_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(ICH = mean(spill)) -> ICH_spill_summary
+
+LGR_cov %>% 
+  filter(!(run_year == "24/25")) %>% 
+  group_by(run_year) %>% 
+  summarise(LGR = mean(spill)) -> LGR_spill_summary
+
+BON_spill_summary %>% 
+  left_join(., MCN_spill_summary, by = "run_year") %>% 
+  left_join(., PRA_spill_summary, by = "run_year") %>% 
+  left_join(., RIS_spill_summary, by = "run_year") %>% 
+  left_join(., RRE_spill_summary, by = "run_year") %>% 
+  left_join(., WEL_spill_summary, by = "run_year") %>% 
+  left_join(., ICH_spill_summary, by = "run_year") %>% 
+  left_join(., LGR_spill_summary, by = "run_year") -> all_dams_spill_table
+
+# spill days
+data.frame(MCW_data$winter_spill_days_data[-1,] * 100) %>% 
+  dplyr::select(-c(MOUTH, BON)) -> winter_spill_days_table
+
+winter_spill_days_table$run_year <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+
+
+### function to plot spill days, spill volume, and temperature at each dam ###
+plot_covariates_one_dam <- function(data, dam_abbrev){
+  
+  temperature_plot <- ggplot(data, aes(x = plotting_date, y = temp, color = run_year)) +
+  geom_line() +
+    coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), expand = FALSE) +
+    xlab("Date") +
+  ylab("Temperature") +
+  # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+      scale_x_date(date_breaks = "1 month", date_labels = c("Jan 1", "Feb 1", "Mar 1",
+                                                        "Apr 1", "May 1", "Jun 1",
+                                                        "Jul 1", "Aug 1", "Sep 1",
+                                                        "Oct 1", "Nov 1", "Dec 1")) +
+      scale_color_viridis_d(option = "turbo", guide = guide_legend(ncol = 2, title = "Run Year")) +
+    theme(panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          # axis.title.y = element_blank(),
+          # axis.text.y = element_blank(),
+          # axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm"))
+
+
+spill_volume_plot <- ggplot(data, aes(x = plotting_date, y = spill, color = run_year)) +
+  geom_line() +
+    coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31"))) +
+    xlab("Date") +
+  ylab("Spill (kcfs)") +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b", expand = c(0,0)) +
+  scale_color_viridis_d(option = "turbo", guide = guide_legend(ncol = 2, title = "Run Year")) +
+    theme(panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          # axis.title.y = element_blank(),
+          # axis.text.y = element_blank(),
+          # axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm"))
+
+as.data.frame(MCW_data$winter_spill_days_data[-1,]*100) %>% 
+  dplyr::select(-c(MOUTH, BON)) %>% 
+  rownames_to_column("index") -> winter_spill_days
+
+winter_spill_days$run_year <- c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")
+
+winter_spill_days %>% 
+  pivot_longer(cols = where(is.numeric), values_to = "Days", names_to = "Dam") %>% 
+  mutate(index = as.numeric(index)) -> winter_spill_days_long
+
+spill_days_plot <- ggplot(subset(winter_spill_days_long, Dam == dam_abbrev), aes(x = index, y = Days)) +
+  geom_point() +
+  xlab("Run Year") +
+  ylab("Winter Spill Days") +
+  scale_x_continuous(breaks = seq(2,20,2), labels = c("05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14", "14/15", "15/16", "16/17", "17/18", "18/19", "19/20", "20/21","21/22", "22/23", "23/24")[seq(1,19, 2)]) +
+  scale_y_continuous(lim = c(0,85)) +
+    theme(panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          # axis.title.y = element_blank(),
+          # axis.text.y = element_blank(),
+          # axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm"))
+
+return(list(temperature_plot, spill_volume_plot, spill_days_plot))
+  
+}
+
+BON_plots <- plot_covariates_one_dam(data = BON_cov, dam_abbrev = "BON")
+MCN_plots <- plot_covariates_one_dam(data = MCN_cov, dam_abbrev = "MCN")
+PRA_plots <- plot_covariates_one_dam(data = PRA_cov, dam_abbrev = "PRA")
+RIS_plots <- plot_covariates_one_dam(data = RIS_cov, dam_abbrev = "RIS")
+RRE_plots <- plot_covariates_one_dam(data = RRE_cov, dam_abbrev = "RRE")
+WEL_plots <- plot_covariates_one_dam(data = WEL_cov, dam_abbrev = "WEL")
+ICH_plots <- plot_covariates_one_dam(data = ICH_cov, dam_abbrev = "ICH")
+LGR_plots <- plot_covariates_one_dam(data = LGR_cov, dam_abbrev = "LGR")
+
+
+```
+
+```{r generate_summary_tables}
+all_dams_temp_table %>% 
+  mutate(across(where(is.numeric), ~ round(., 2))) %>% 
+  dplyr::rename("Run Year" = run_year) %>% 
+  kbl(caption = "Mean temperature by run year across the dams in this study.") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+all_dams_spill_table %>% 
+  mutate(across(where(is.numeric), ~ round(., 2))) %>% 
+  dplyr::rename("Run Year" = run_year) %>% 
+  kbl(caption = "Mean spill volume (kcfs) by run year across the dams in this study.") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+rownames(winter_spill_days_table) <- NULL
+winter_spill_days_table %>% 
+  relocate(run_year) %>% 
+  dplyr::rename("Run Year" = run_year) %>% 
+  kbl(caption = "Number of winter (January - March) spill days by run year across the dams in this study. Please note that Bonneville Dam is not included in this plot because it is not an overshoot dam for any populations in our study.") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+
+```
+
+
+In the panels below, plots of temperature, spill volume, and number of winter spill days are shown for each of the mainstem dams in this study. Please note that because the temperature visualized here (and incorporated into the model) is an output from a MARSS model that estimated a single temperature state for the entire Columbia River Basin, all dams have the same trends in temperature, but with different overall magnitudes. The choice to model the entire basin as a single temperature trend was necessitated by significant gaps in data at some dams.
+
+
+#### Bonneville Dam
+```{r fig.dim = c(10,6)}
+BON_plots[[1]]
+BON_plots[[2]]
+```
+
+#### McNary Dam
+```{r fig.dim = c(10,6)}
+MCN_plots[[1]]
+MCN_plots[[2]]
+MCN_plots[[3]]
+```
+
+#### Priest Rapids Dam
+```{r fig.dim = c(10,6)}
+PRA_plots[[1]]
+PRA_plots[[2]]
+PRA_plots[[3]]
+```
+
+#### Rock Island Dam
+```{r fig.dim = c(10,6)}
+RIS_plots[[1]]
+RIS_plots[[2]]
+RIS_plots[[3]]
+```
+
+#### Rocky Reach Dam
+```{r fig.dim = c(10,6)}
+RRE_plots[[1]]
+RRE_plots[[2]]
+RRE_plots[[3]]
+```
+
+#### Wells Dam
+```{r fig.dim = c(10,6)}
+WEL_plots[[1]]
+WEL_plots[[2]]
+WEL_plots[[3]]
+```
+
+#### Ice Harbor Dam
+```{r fig.dim = c(10,6)}
+ICH_plots[[1]]
+ICH_plots[[2]]
+ICH_plots[[3]]
+```
+
+#### Lower Granite Dam
+```{r fig.dim = c(10,6)}
+LGR_plots[[1]]
+LGR_plots[[2]]
+LGR_plots[[3]]
+```
+
+
+### 3 Covariate correlations {.tabset .tabset-pills}
+
+```{r}
 #### Plot relationships ####
 plot_spill_v_flow <- function(data, dam){
   plot <- ggplot(data, aes(x = flow, y = spill)) +
@@ -1250,7 +1697,7 @@ LGR_temp_spill_corr_table %>%
 ```
 
 
-### 3 Post-overshoot fallback timing {.tabset .tabset-pills}
+### 4 Post-overshoot fallback timing {.tabset .tabset-pills}
 
 These figures show the timing of observations of overshoot (first point) and first observation following post-overshoot fallback (second point) for each fish from a given population. Red points indicate terminal overshoot observations (where fish were not seen again below an overshoot dam following overshoot). Lines connecting overshoot observations with post-overshoot fallback observations indicate that time period in which a fallback event must have occurred. Dashed green lines indicate the winter months (January, February, and March) that were used to characterize the likely spill conditions encountered by fish in overshoot states. In our model, any fish that was last observed overshooting (red dots) or where based on their detection history, may have fallen back during January, February, or March (any black lines that are at least partially between the two dashed green lines) are affected by the winter spill days covariate.
 
@@ -1481,47 +1928,83 @@ origin_overshoots %>%
 # here, we need to pull when they were seen after falling back (first not overshoot state timing),
 # and when they were last seen previous to falling back (this is the last overshoot state where
 # the date isn't the same)
+# origin_overshoot_history %>%
+#   # this drops any overshoot states that are implicit movements (and therefore,
+#   # the dates aren't useful)
+#   filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
+#            overshoot == "overshoot" & date_actual != lead(date_actual) |
+#            overshoot == "overshoot" & lead(state) == 41) %>%
+#   # this now keeps only the observation directly before the fallback detection
+#     filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
+#            overshoot == "overshoot" & lead(overshoot) == "not overshoot") -> origin_end_overshoot_history
+
+
+# Identify the last overshoot event and then the first time after fallback
 origin_overshoot_history %>%
   # this drops any overshoot states that are implicit movements (and therefore,
   # the dates aren't useful)
   filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
            overshoot == "overshoot" & date_actual != lead(date_actual) |
-           overshoot == "overshoot" & lead(state) == 41) %>%
-  # this now keeps only the observation directly before the fallback detection
-    filter(overshoot == "not overshoot" & lag(overshoot) == "overshoot" |
-           overshoot == "overshoot" & lead(overshoot) == "not overshoot") -> origin_end_overshoot_history
+           overshoot == "overshoot" & lead(state) == 41) %>% 
+  # drop any movements that aren't preceded by a mainstem overshoot
+  filter(overshoot == "overshoot" | lag(overshoot == "overshoot") & state %in% c(1:9)) -> origin_end_overshoot_history
+
+# now divide this up so that we can plot each overshoot movement and the next detection
+origin_end_overshoot_history %>% 
+  mutate(overshoot_start_date = if_else(overshoot == "overshoot" & state %in% 1:9, date_actual, as.Date(NA))) %>% 
+  mutate(overshoot_start_month_day = format(as.Date(overshoot_start_date), "%m-%d")) %>% 
+  mutate(overshoot_end_date = if_else(overshoot == "overshoot" & state %in% 1:9, lead(date_actual), as.Date(NA))) %>% 
+  mutate(overshoot_end_month_day = format(as.Date(overshoot_end_date), "%m-%d")) -> origin_end_overshoot_history
 
 # make the dates revolve around the run_year
 origin_end_overshoot_history %>% 
-  mutate(plotting_year = ifelse(month(date_actual) < 6, 2000, 1999)) %>% 
-  mutate(plotting_date = ymd(paste0(plotting_year, "-", month_day))) -> origin_end_overshoot_history
+  mutate(plotting_overshoot_start_date_year = ifelse(month(overshoot_start_date) < 6, 2000, 1999)) %>% 
+  mutate(plotting_overshoot_start_date = ymd(paste0(plotting_overshoot_start_date_year, "-", overshoot_start_month_day))) %>% 
+  mutate(plotting_overshoot_end_date_year = ifelse(month(overshoot_end_date) < 6, 2000, 1999)) %>% 
+  mutate(plotting_overshoot_end_date = ymd(paste0(plotting_overshoot_end_date_year, "-", overshoot_end_month_day))) -> origin_end_overshoot_history
 
-origin_end_overshoot_history$ID_new <- rep(1:(nrow(origin_end_overshoot_history)/2), each = 2)
+# re-assign IDs
+origin_end_overshoot_history %>% 
+  ungroup() %>% 
+  mutate(ID_new = row_number()) -> origin_end_overshoot_history
+
+
 
 # figure out which fish we don't see again
 origin_end_overshoot_history %>% 
-  group_by(fish_ID) %>% 
-  filter(lead(state) == 41) -> origin_overshoot_loss
+  filter(!(is.na(overshoot_start_date)) & is.na(overshoot_end_date)) -> origin_overshoot_loss
 
-origin_end_overshoot_history %>% 
-  group_by(fish_ID) %>% 
-  filter(lead(state) == 41 | state == 41) -> origin_overshoot_loss
-
+# origin_end_overshoot_history %>% 
+#   group_by(fish_ID) %>% 
+#   filter(lead(state) == 41) -> origin_overshoot_loss
+# 
+# origin_end_overshoot_history %>% 
+#   group_by(fish_ID) %>% 
+#   filter(lead(state) == 41 | state == 41) -> origin_overshoot_loss
+# 
 # add a fake date to indicate that we don't know when this could end
-origin_overshoot_loss %>% 
-  mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-05-31"), ymd(plotting_date))) -> origin_overshoot_loss
+# origin_overshoot_loss %>%
+#   mutate(plotting_date = if_else(is.na(plotting_date), ymd("2000-05-31"), ymd(plotting_date))) -> origin_overshoot_loss
+origin_overshoot_loss %>%
+  mutate(plotting_overshoot_end_date = if_else(is.na(plotting_overshoot_end_date), ymd("2000-05-31"), ymd(plotting_overshoot_end_date))) -> origin_overshoot_loss
 
-overshoot_fallback_timing_plot <- ggplot(origin_end_overshoot_history, aes(x = plotting_date, y = ID_new)) +
-  geom_line(aes(group = ID_new), linewidth = 0.25) +
-  geom_point() +
-  geom_point(data = subset(origin_overshoot_loss, state != 41), aes(x = plotting_date, y = ID_new), color = "red") +
+overshoot_fallback_timing_plot <- ggplot(origin_end_overshoot_history, aes(y = ID_new)) +
+  # geom_line(aes(group = ID_new), linewidth = 0.25) +
+  geom_segment(aes(x = plotting_overshoot_start_date, xend = plotting_overshoot_end_date, y = ID_new, yend = ID_new)) +
+  geom_point(aes(x = plotting_overshoot_start_date, y = ID_new)) +
+  geom_point(aes(x = plotting_overshoot_end_date, y = ID_new)) +
+  geom_point(data = origin_overshoot_loss, aes(x = plotting_overshoot_start_date, y = ID_new), color = "red") + # this places a red dot on top of any start overshoot dates that aren't followed by a subsequent post-fallback detection
   # geom_line(data = origin_overshoot_loss, aes(group = ID_new, x = plotting_date, y = ID_new), color = "red") +
   geom_vline(xintercept = ymd("2000-01-01"), lty = 2, color = "#2ca25f") +
   geom_vline(xintercept = ymd("2000-03-31"), lty = 2, color = "#2ca25f") +
   coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), 
                   ylim = c(0, max(origin_end_overshoot_history$ID_new)+1), expand = FALSE) +
     xlab("Date") +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+    scale_x_date(date_breaks = "1 month", date_labels = c("Jan 1", "Feb 1", "Mar 1",
+                                                        "Apr 1", "May 1", "Jun 1",
+                                                        "Jul 1", "Aug 1", "Sep 1",
+                                                        "Oct 1", "Nov 1", "Dec 1")) +
     theme(legend.position = "none",
           panel.grid.major = element_line(color = "gray90"),
           panel.background = element_rect(fill = "white", color = "black"),
@@ -1532,7 +2015,58 @@ overshoot_fallback_timing_plot <- ggplot(origin_end_overshoot_history, aes(x = p
           plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
   ggtitle(paste0(natal_origin_select, ", ", ifelse(rear_select == "wild", "natural", rear_select)))
 
-return(overshoot_fallback_timing_plot)
+#### summarize timing of post-overshoot fallback timing ####
+origin_end_overshoot_history %>% 
+  mutate(jan_mar_window = ifelse(ymd("2000-01-01") >= plotting_overshoot_start_date & ymd("2000-01-01") <= plotting_overshoot_end_date | 
+                                   ymd("2000-03-31") >= plotting_overshoot_start_date & ymd("2000-03-31") <= plotting_overshoot_end_date, 1, 0)) %>% 
+  filter(!is.na(overshoot_start_date)) %>% 
+  mutate(jan_mar_window = ifelse(is.na(overshoot_end_date) & plotting_overshoot_start_date <= ymd("2000-03-31"), 1, jan_mar_window)) -> origin_end_overshoot_history
+
+as.data.frame(table(origin_end_overshoot_history$jan_mar_window)) %>% 
+  dplyr::rename(jan_mar_window = Var1) %>% 
+  mutate(population = paste(natal_origin_select, rear_select)) %>% 
+  mutate(population = gsub("wild", "natural", population)) -> jan_mar_window_table
+  
+
+#### plot post-overshoot fallback timing ####
+
+# create df to store fallback dam combos
+fallback_dams_df <- data.frame(fallback_state = c(2,3,4,5,6,3,8),
+                               overshoot_state = c(3,4,5,6,7,8,9))
+
+# identify fallback movements
+origin_overshoots %>% 
+  left_join(fallback_dams_df, by = join_by(state == overshoot_state)) %>% 
+  mutate(fallback = ifelse(fish_ID == lag(fish_ID) & lag(overshoot) == "overshoot" & lag(fallback_state) == state, 1, 0)) %>% 
+  # make sure that we don't double count implicit fallbacks
+  filter(!(model_date == lag(model_date) & fish_ID == lag(fish_ID) & fallback == 1)) %>% 
+  filter(fallback == 1) %>% 
+  mutate(plotting_year = ifelse(month(date_actual) < 6, 2000, 1999)) %>% 
+  mutate(plotting_date = ymd(paste0(plotting_year, "-", month_day))) %>% 
+  mutate(population = paste(natal_origin_select, rear_select)) %>% 
+  mutate(population = gsub("wild", "natural", population)) -> known_fallback_timing
+
+fallback_timing_plot <- ggplot(known_fallback_timing, aes(x = plotting_date)) +
+  geom_histogram() +
+    coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), expand = FALSE) +
+    xlab("Date") +
+  # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+    scale_x_date(date_breaks = "1 month", date_labels = c("Jan 1", "Feb 1", "Mar 1",
+                                                        "Apr 1", "May 1", "Jun 1",
+                                                        "Jul 1", "Aug 1", "Sep 1",
+                                                        "Oct 1", "Nov 1", "Dec 1")) +
+    theme(legend.position = "none",
+          panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          # axis.title.y = element_blank(),
+          # axis.text.y = element_blank(),
+          # axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm")) +
+  ggtitle(paste0(natal_origin_select, ", ", ifelse(rear_select == "wild", "natural", rear_select)))
+
+
+return(list(overshoot_fallback_timing_plot, jan_mar_window_table, fallback_timing_plot, known_fallback_timing))
 
 # origin_end_overshoot_history %>% 
 #   mutate(movement = ifelse(overshoot == "overshoot", "overshoot",
@@ -1561,6 +2095,14 @@ return(overshoot_fallback_timing_plot)
 
 # return(list(overshoot_fallback_timing_plot, overshoot_fallback_timing_histogram))
 }
+
+# check that post overshoot was correctly assigned
+# subset(origin_data, fish_ID == 1105)
+# subset(state_visits, !(state %in% c(0, 41))) -> state_visits_noloss
+# state_visits_noloss$winter_post_overshoot <- MCW_data$winter_post_overshoot_vector
+# subset(state_visits_noloss, fish_ID == 1105)
+
+# subset(origin_data, fish_ID == "5119")
 ```
 
 
@@ -1631,69 +2173,145 @@ TUC_H_overshoot_fallback_timing_plot <- plot_overshoot_fallback_timing(data = SR
                                rear_select = "hatchery")
 ```
 
+
+```{r fallback_timing_all_origin_summaries, fig.dim = c(8,8)}
+
+# create a summary table of jan mar window
+DES_W_overshoot_fallback_timing_plot[[2]] %>% 
+  bind_rows(JDR_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(FIF_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(UMA_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(UMA_H_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(YAK_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(WAWA_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(WAWA_H_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(ENT_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(WEN_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(WEN_H_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(TUC_W_overshoot_fallback_timing_plot[[2]]) %>% 
+  bind_rows(TUC_H_overshoot_fallback_timing_plot[[2]]) %>% 
+  mutate(jan_mar_window = as.numeric(jan_mar_window)-1) %>% 
+  pivot_wider(names_from = jan_mar_window, values_from = Freq) %>% 
+  dplyr::rename(in_window = `1`, outside_window = `0`) %>% 
+  mutate(total = in_window + outside_window) %>% 
+  mutate(proportion = in_window/total) %>% 
+  dplyr::select(-outside_window) -> jan_mar_window_table
+
+jan_mar_window_table %>% 
+  mutate(proportion = round(proportion, 2)) %>% 
+  kbl(caption = "Proportion of overshoot state visits that received the January-March spill days covariate.") %>% 
+  kable_styling(latex_options = "HOLD_position")
+
+DES_W_overshoot_fallback_timing_plot[[4]] %>% 
+  bind_rows(JDR_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(FIF_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(UMA_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(UMA_H_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(YAK_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(WAWA_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(WAWA_H_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(ENT_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(WEN_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(WEN_H_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(TUC_W_overshoot_fallback_timing_plot[[4]]) %>% 
+  bind_rows(TUC_H_overshoot_fallback_timing_plot[[4]])  -> known_fallback_timing_all_origins
+
+ggplot(known_fallback_timing_all_origins, aes(x = plotting_date, fill = population)) +
+  geom_histogram() +
+    coord_cartesian(xlim = c(ymd("1999-06-01"), ymd("2000-05-31")), expand = FALSE) +
+    xlab("Date") +
+  # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_x_date(date_breaks = "1 month", date_labels = c("Jan 1", "Feb 1", "Mar 1",
+                                                        "Apr 1", "May 1", "Jun 1",
+                                                        "Jul 1", "Aug 1", "Sep 1",
+                                                        "Oct 1", "Nov 1", "Dec 1")) +
+  scale_fill_tableau(palette = "Tableau 20") +
+    theme(panel.grid.major = element_line(color = "gray90"),
+          panel.background = element_rect(fill = "white", color = "black"),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=0.4),
+          # axis.title.y = element_blank(),
+          # axis.text.y = element_blank(),
+          # axis.ticks.y = element_blank(),
+          plot.margin = unit(c(0.2, 0.2, 0.2, 0.2),"cm"))
+
+```
+
 #### Deschutes (N)
 ```{r fig.dim = c(6,10)}
-DES_W_overshoot_fallback_timing_plot
+DES_W_overshoot_fallback_timing_plot[[1]]
+DES_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### John Day (N)
 ```{r fig.dim = c(6,10)}
-JDR_W_overshoot_fallback_timing_plot
+JDR_W_overshoot_fallback_timing_plot[[1]]
+JDR_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Fifteenmile (N)
 ```{r fig.dim = c(6,10)}
-FIF_W_overshoot_fallback_timing_plot
+FIF_W_overshoot_fallback_timing_plot[[1]]
+FIF_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Umatilla (N)
 ```{r fig.dim = c(6,10)}
-UMA_W_overshoot_fallback_timing_plot
+UMA_W_overshoot_fallback_timing_plot[[1]]
+UMA_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Umatilla (H)
 ```{r fig.dim = c(6,10)}
-UMA_H_overshoot_fallback_timing_plot
+UMA_H_overshoot_fallback_timing_plot[[1]]
+UMA_H_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Yakima (N)
 ```{r fig.dim = c(6,10)}
-YAK_W_overshoot_fallback_timing_plot
+YAK_W_overshoot_fallback_timing_plot[[1]]
+YAK_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Walla Walla (N)
 ```{r fig.dim = c(6,10)}
-WAWA_W_overshoot_fallback_timing_plot
+WAWA_W_overshoot_fallback_timing_plot[[1]]
+WAWA_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Walla Walla (H)
 ```{r fig.dim = c(6,10)}
-WAWA_H_overshoot_fallback_timing_plot
+WAWA_H_overshoot_fallback_timing_plot[[1]]
+WAWA_H_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Entiat (N)
 ```{r fig.dim = c(6,10)}
-ENT_W_overshoot_fallback_timing_plot
+ENT_W_overshoot_fallback_timing_plot[[1]]
+ENT_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Wenatchee (N)
 ```{r fig.dim = c(6,10)}
-WEN_W_overshoot_fallback_timing_plot
+WEN_W_overshoot_fallback_timing_plot[[1]]
+WEN_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Wenatchee (H)
 ```{r fig.dim = c(6,10)}
-WEN_H_overshoot_fallback_timing_plot
+WEN_H_overshoot_fallback_timing_plot[[1]]
+WEN_H_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Tucannon (N)
 ```{r fig.dim = c(6,10)}
-TUC_W_overshoot_fallback_timing_plot
+TUC_W_overshoot_fallback_timing_plot[[1]]
+TUC_W_overshoot_fallback_timing_plot[[3]]
 ```
 
 #### Tucannon (H)
 ```{r fig.dim = c(6,10)}
-TUC_H_overshoot_fallback_timing_plot
+TUC_H_overshoot_fallback_timing_plot[[1]]
+TUC_H_overshoot_fallback_timing_plot[[3]]
 ```
 
 
@@ -1701,7 +2319,12 @@ TUC_H_overshoot_fallback_timing_plot
 
 
 
-### 4 Detection efficiency estimation {.tabset .tabset-pills}
+### 5 Detection efficiency estimation {.tabset .tabset-pills}
+
+
+The figures below show the estimated relationship between discharge and detection efficiency at the river mouth sites for different tributaries in different site configurations. A priori, our hypothesis was that detection efficiency would generally decrease as discharge increases, as increased flow would increase the area that is outside the detection range of the PIT tag arrays. However, as seen below, for some tributaries we estimated a positive relationship between discharge and detection efficiency. There are two possible explanations for this estimated relationship. First, changes to the PIT-tag antenna configurations or operations that were not captured in our site configuration covariate in the detection level efficiency estimation could be obscuring the true relationship. While we attempted to capture major changes, an inspection of the operational history and event log summary at each site on the [PTAGIS Interrogation Site Metadata](https://www.ptagis.org/Sites/InterrogationSites) reveals numerous events (e.g., battery failures, flood damage, equipment failures and repairs) that may have affected the detection efficiency and confounded the relationship with discharge. Second, there are reasons that higher discharge may actually be favorable for detection efficiency. For example, PIT tag arrays are known to perform poorly in cases where two or more fish pass over the antenna at the same time [@Greenberg2000], which may be more likely when flows are low. Furthermore, fish behavior can change with changing stream conditions, and the ability of PIT tag interrogation systems to detect fish can change with conditions that are affected by flow, including water temperature, conductivity, and air temperature [@Connolly2009].
+
+
 
 #### Fifteenmile Creek
 ![Fifteenmile Creek, estimated detection efficiency.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/detection_efficiency/fifteenmile_fitted_DE_plot_era1.png){width=100%}
@@ -1761,7 +2384,7 @@ TUC_H_overshoot_fallback_timing_plot
 
 
 
-### 5 Model diagnostic figures
+### 6 Model diagnostic figures
 
 ![The R-hat convergence diagnostic for each of the six models run. The R-hat convergence diagnostic compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (i.e., the between- and within-chain estimates don’t agree), R-hat is larger than 1. We recommend running at least four chains by default and only using the sample if R-hat is less than 1.05. Stan reports R-hat which is the maximum of rank normalized split-R-hat and rank normalized folded-split-R-hat, which works for thick tailed distributions and is sensitive also to differences in scale.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/rhat_comb_plots.png){width=100%}
 
@@ -1773,7 +2396,7 @@ TUC_H_overshoot_fallback_timing_plot
 
 ![Tail Effective Sample Size (tail-ESS) using rank normalized draws, for each of the six models run. Tail-ESS is produces by computing the minimum of effective sample sizes for 5% and 95% quantiles. Tail-ESS is useful measure for sampling efficiency in the tails of the distribution (related to efficiency of variance and tail quantile estimates). Both bulk-ESS and tail-ESS should be at least 100 (approximately) per Markov Chain in order to be reliable and indicate that estimates of respective posterior quantiles are reliable.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/diagnostic_plots/ess_tail_comb_plots.png){width=100%}
 
-### 6 Final fates, under median conditions {.tabset .tabset-pills}
+### 7 Final fates, under median conditions {.tabset .tabset-pills}
 #### Fifteenmile Creek
 ![Fifteenmile Creek, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/fif_ff_comp_median_plot.png){width=100%}
 
@@ -1838,10 +2461,10 @@ NOTE: Detection efficiency could not be estimated for the Clearwater River, beca
 #### Imnaha River
 ![Imnaha River, estimated final fates under median conditions from 2005-2024.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/final_fates/imn_ff_comp_median_plot.png){width=100%}
 
-### 7 Deschutes River movement
+### 8 Deschutes River movement
 ![Probability of movement into the Deschutes River by temperature, conditional on being in the reach of the mainstem Columbia between Bonneville and McNary Dam. Histograms on the plot margins indicate the temperature experiences of individual fish. Because this movement occurs within the Middle Columbia DPS, those populations have separate probabilities of movement, and are shown in panels A-F, while fish from the Upper Columbia DPS and the Snake River DPS have shared movement probabilities for this movement and are shown in panels G and H.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/Fig5_deschutes_temp_movements.png){width=100%}
 
-### 8 En-route fallback as a function of spill volume {.tabset .tabset-pills}
+### 9 En-route fallback as a function of spill volume {.tabset .tabset-pills}
 
 #### Bonneville Dam
 ![Probability of fallback at Bonneville Dam, by volume of spill. Because this movement occurs within the Middle Columbia DPS, those populations have separate probabilities of movement, and are shown in panels A-H, while fish from the Upper Columbia DPS and the Snake River DPS have shared movement probabilities for this movement and are shown in panels I-L. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/BON_spill_fallback.png){width=100%}
@@ -1855,7 +2478,7 @@ NOTE: Detection efficiency could not be estimated for the Clearwater River, beca
 #### Lower Granite Dam
 ![Probability of fallback at Lower Granite Dam, by volume of spill. Only Snake River populations are shown because an ascent of Lower Granite Dam by any populations from the Middle or Upper Columbia would be overshoot and therefore the probability of fallback is affected by winter spill days rather than spill volume. The Tucannon River is also not shown because Lower Granite Dam is an overshoot for that population. Histograms on the plot margins indicate the spill experiences of individual fish.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/paper_figures/spill_volume/LGR_spill_fallback.png){width=100%}
 
-### 9 Post-overshoot fallback as a function of March spill
+### 10 Post-overshoot fallback as a function of March spill
 
 This section presents the results of the same model, but run where only days of spill in March are used as a covariate instead of days of spill in January, February, and March (as is used in the base model).
 
@@ -1865,3 +2488,6 @@ This section presents the results of the same model, but run where only days of 
 
 ![The homing probability for (A) John Day River, (B) Umatilla River, (C) Walla Walla River, (D) Wenatchee River, (E) Tucannon River, (F) Entiat River, and (G) Yakima River Steelhead under different scenarios for basin-wide temperature and March spill days (0, 10, 20, or 30 days) at the overshoot dam. The temperature scenarios are specific run years from the dataset, with the coldest year being the 2011/2012 run year, the average year being the 2005/2006 run year, and the warmest year being the 2015/2016 run year.](/Users/markusmin/Documents/CBR/CRB_steelhead_adult_movement/figures/alternative_spill_treatment/paper_figures/Fig8_FF_cov_combined_plot_marchspill.png){width=100%}
 
+
+
+## References
