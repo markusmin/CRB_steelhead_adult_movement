@@ -12,6 +12,29 @@ library(ggpubr)
 library(MARSS)
 library(mixtools)
 
+#### process barging data ####
+
+# load file for each individual year
+years <- 2001:2024
+for (i in years){
+  if (i == 2001){
+    transport_data <- read.csv(here::here("Data", "covariate_data", "transport", "steelhead_transport_2001.csv"))
+  } else {
+    new_data <- read.csv(here::here("Data", "covariate_data", "transport", paste0("steelhead_transport_", i, ".csv")))
+    transport_data %>% 
+      bind_rows(new_data) -> transport_data
+  }
+}
+
+# export just as tag code and transport
+transport_data %>% 
+  mutate(transport = ifelse(trans_status == "T", 1, 0)) %>% 
+  filter(transport == 1) %>%  # we're missing all fish that weren't sampled or transported anyway, so just keep positives
+  dplyr::select(tag_id, transport) -> transport_data_export
+
+write.csv(transport_data_export, here::here("Data", "covariate_data", "model_inputs", "transport.csv"), row.names = FALSE)
+
+
 #### define temperature functions ####
 
 # Function 1: reformat covariate data
