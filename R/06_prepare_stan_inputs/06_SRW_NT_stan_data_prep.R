@@ -1,4 +1,4 @@
-# 06 stan data prep: Upper Columbia Wild
+# 06 stan data prep: Snake River Wild
 
 # This script doesn't do any model fitting - it just creates the input files for stan
 
@@ -87,39 +87,40 @@ origin_param_map <- data.frame(
            6,1,2,5,3,4)) # SR
 
 # v3: Create a manual way to determine which parameters to fix
-subset(origin_param_map, natal_origin %in% c("Wenatchee River", "Entiat River", 
-                                             "Okanogan River", "Methow River")) -> UC_origin_param_map
+subset(origin_param_map, natal_origin %in% c("Tucannon River", "Asotin Creek",
+                                             "Clearwater River", "Salmon River",
+                                             "Grande Ronde River", "Imnaha River")) -> SR_origin_param_map
 
-UC_origin_param_map$home_mainstem_state <- c(5,6,7,7)
+SR_origin_param_map$home_mainstem_state <- c(8,9,9,9,9,9)
 
 mainstem_states <- 1:9
-DPS_mainstem_states <- 4:7
+DPS_mainstem_states <- 8:9
 
 # find where the parameter is declared
-for (i in 1:nrow(subset(UC_origin_param_map, !(is.na(wild))))){
+for (i in 1:nrow(subset(SR_origin_param_map, !(is.na(wild))))){
   for (j in 1:length(DPS_mainstem_states)){
-    if(DPS_mainstem_states[j] > subset(UC_origin_param_map, !(is.na(wild)))$home_mainstem_state[i]){
-      print(paste0("real<lower=0> sigma_yearxorigin", subset(UC_origin_param_map, !(is.na(wild)))$wild[i], "_vector_", DPS_mainstem_states[j], "_", DPS_mainstem_states[j]-1))
+    if(DPS_mainstem_states[j] > subset(SR_origin_param_map, !(is.na(wild)))$home_mainstem_state[i]){
+      print(paste0("real<lower=0> sigma_yearxorigin", subset(SR_origin_param_map, !(is.na(wild)))$wild[i], "_vector_", DPS_mainstem_states[j], "_", DPS_mainstem_states[j]-1))
     }
     
   }
 }
 
 # find where the prior is set
-for (i in 1:nrow(subset(UC_origin_param_map, !(is.na(wild))))){
+for (i in 1:nrow(subset(SR_origin_param_map, !(is.na(wild))))){
   for (j in 1:length(DPS_mainstem_states)){
-    if(DPS_mainstem_states[j] > subset(UC_origin_param_map, !(is.na(wild)))$home_mainstem_state[i]){
-      print(paste0("sigma_yearxorigin", subset(UC_origin_param_map, !(is.na(wild)))$wild[i], "_vector_", DPS_mainstem_states[j], "_", DPS_mainstem_states[j]-1, " ~ cauchy(0,1)"))
+    if(DPS_mainstem_states[j] > subset(SR_origin_param_map, !(is.na(wild)))$home_mainstem_state[i]){
+      print(paste0("sigma_yearxorigin", subset(SR_origin_param_map, !(is.na(wild)))$wild[i], "_vector_", DPS_mainstem_states[j], "_", DPS_mainstem_states[j]-1, " ~ cauchy(0,1)"))
     }
     
   }
 }
 
 # declare the parameters to be zero (for transformed data section)
-for (i in 1:nrow(subset(UC_origin_param_map, !(is.na(wild))))){
+for (i in 1:nrow(subset(SR_origin_param_map, !(is.na(wild))))){
   for (j in 1:length(DPS_mainstem_states)){
-    if(DPS_mainstem_states[j] > subset(UC_origin_param_map, !(is.na(wild)))$home_mainstem_state[i]){
-      print(paste0("real sigma_yearxorigin", subset(UC_origin_param_map, !(is.na(wild)))$wild[i], "_vector_", DPS_mainstem_states[j], "_", DPS_mainstem_states[j]-1, " = 0;"))
+    if(DPS_mainstem_states[j] > subset(SR_origin_param_map, !(is.na(wild)))$home_mainstem_state[i]){
+      print(paste0("real sigma_yearxorigin", subset(SR_origin_param_map, !(is.na(wild)))$wild[i], "_vector_", DPS_mainstem_states[j], "_", DPS_mainstem_states[j]-1, " = 0;"))
     }
     
   }
@@ -421,17 +422,17 @@ river_mouth_indices <- upstream_indices - 1
 
 # Load states complete
 # states_complete <- read.csv(here::here("intermediate_outputs", "adults_states_complete", 
-#                                        "upper_columbia_adults_states_complete.csv"), row.names = 1)
-states_complete <- read.csv("intermediate_outputs/adults_states_complete/upper_columbia_adults_states_complete.csv", row.names = 1)
+#                                        "snake_adults_states_complete.csv"), row.names = 1)
+states_complete <- read.csv("intermediate_outputs/adults_states_complete/snake_adults_states_complete.csv", row.names = 1)
 
 # load and join transport data
-transport_data <- read.csv(here::here("Data", "covariate_data", "model_inputs", "transport.csv"))
+transport_data <- read.csv("Data/covariate_data/model_inputs/transport.csv")
 
 states_complete %>% 
   left_join(., transport_data, by = join_by(tag_code == tag_id)) %>% 
   mutate(transport = ifelse(is.na(transport), 0, transport)) -> states_complete
 
-### KEEP ONLY THE WILD ORIGIN FISH
+### KEEP ONLY THE HATCHERY ORIGIN FISH
 # tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
 tag_code_metadata <- read.csv("Data/covariate_data/tag_code_metadata.csv")
 # keep only the fish that are in the dataset
@@ -444,19 +445,36 @@ tag_code_metadata %>%
 
 states_complete %>% 
   left_join(., dplyr::select(tag_code_metadata, tag_code, rear_type_code, natal_origin), by = "tag_code") %>% 
-  subset(!(rear_type_code %in% c("U", "H")) ) -> states_complete
+  subset(!(rear_type_code %in% c("U", "H"))) -> states_complete
 
 # Count how many we have by origin, and drop small sample sizes
 states_complete %>% 
   filter(!duplicated(tag_code_2)) %>% 
-  count(natal_origin) -> uppcol_wild_origin_table
+  count(natal_origin) -> SR_wild_origin_table
 
-origins_to_drop <- subset(uppcol_wild_origin_table, n < 350)$natal_origin
-# Dropping wild, Okanogan fish
+# check transport vs natal origin
+states_complete %>% 
+  filter(!duplicated(tag_code_2)) %>% 
+  count(natal_origin, transport)
+
+# KEEP ONLY NON-TRANSPORTED FISH
+states_complete %>% 
+  subset(transport == 0) -> states_complete
+
+
+
+
+origins_to_drop <- subset(SR_wild_origin_table, n < 350)$natal_origin
+# Not dropping any fish
 subset(tag_code_metadata, natal_origin %in% origins_to_drop)$tag_code -> drop_tag_codes
 
 states_complete %>% 
   subset(!(tag_code %in% drop_tag_codes)) -> states_complete
+
+# Save the number of origins for this dataset as a global variable; this will be referenced later
+# when we are writing stan code and creating design matrices
+norigins <- length(unique(states_complete$natal_origin))
+
 
 # first create the run year df
 run_year <- c("04/05", "05/06", "06/07", "07/08", "08/09", "09/10", "10/11", "11/12", "12/13", "13/14",
@@ -572,10 +590,6 @@ deschutes_river_trib_det_eff_capability %>%
 # join by state and run year
 states_complete %>% 
   left_join(.,trib_det_eff_capability, by = c("state", "run_year")) -> states_complete
-
-
-# Solution: 1) Remove any transitions that occur between mouth and upstream or upstream and mouth; 2) remove all only upstream transitions
-# that occur in years where DE = 0
 
 # KEY STEP - in all run years in upstream states where DE = 1, remove the upstream state, and remove all transitions between mouth-upstream and upstream-mouth
 # get all of the upstream states in a vector
@@ -731,6 +745,7 @@ for (i in 1:length(trapped_fish_indices)){
   j <- trapped_fish_indices[i]
   state_data[41, n_not_loss_states[j]+1,j] <-0
 }
+
 
 ##### Load and reformat tributary data for detection efficiency #####
 
@@ -1076,7 +1091,7 @@ tag_codes_2 %>%
   left_join(dplyr::select(tag_code_metadata, tag_code, natal_origin_numeric), by = "tag_code") %>% 
   dplyr::rename(natal_origin = natal_origin_numeric) %>% 
   dplyr::select(-tag_code) -> origin_wild_actual
-  
+
 
 fish_sim_cat_data_actual <- origin_wild_actual
   
@@ -1125,52 +1140,86 @@ n.ind <- dim(state_data)[3]
   # new for detection efficiency: add a run year field to allow for glm calculation
   # of detection efficiency, as well as to note when certain movements are not possible
   # cat_X_mat_actual <- matrix(0, nrow = n.ind, ncol = 4)
-  cat_X_mat_actual <- matrix(0, nrow = n.ind, ncol = 3)
+  
+  
+  # Same number of columns as origins
+  cat_X_mat_actual <- matrix(0, nrow = n.ind, ncol = norigins)
   # Start it so that they're all 0s
   
-  # This is for origin
+  # This is for origin + run year
+  # origin_numeric is helpful
   for (i in 1:n.ind){
     # Natal origin
-    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Wenatchee_River")$natal_origin_numeric){ # Wenatchee River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Asotin_Creek")$natal_origin_numeric){ # Asotin Creek
       cat_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Entiat_River")$natal_origin_numeric){ # Entiat River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Clearwater_River")$natal_origin_numeric){ # Clearwater River
       cat_X_mat_actual[i,2] <- 1
     }
-    else { # for Methow River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Grande_Ronde_River")$natal_origin_numeric){ # Grande Ronde River
       cat_X_mat_actual[i,3] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Imnaha_River")$natal_origin_numeric){ # Imnaha River
+      cat_X_mat_actual[i,4] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Salmon_River")$natal_origin_numeric){ # Salmon River
+      cat_X_mat_actual[i,5] <- 1
+    }
+    else { # for Tucannon River
+      cat_X_mat_actual[i,6] <- 1
     }
   }
   
+  
   # Create a design matrix for temperature - each origin gets an effect; outside of the DPS boundaries, all share an effect
-  temp_X_mat_actual <- matrix(0, nrow = n.ind, ncol = 4)
+  # columns = norigins + 1; first column is universal temp effect, then one column for each origin
+  temp_X_mat_actual <- matrix(0, nrow = n.ind, ncol = (norigins+1))
   # The first column everyone gets a 1 (this is temperature effect for all fish, outside of DPS boundaries)
   temp_X_mat_actual[,1] <- 1
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Wenatchee_River")$natal_origin_numeric){ # Wenatchee River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Asotin_Creek")$natal_origin_numeric){ # Asotin Creek
       temp_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Entiat_River")$natal_origin_numeric){ # Entiat River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Clearwater_River")$natal_origin_numeric){ # Clearwater River
       temp_X_mat_actual[i,3] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Methow_River")$natal_origin_numeric){ # Methow River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Grande_Ronde_River")$natal_origin_numeric){ # Grande Ronde River
       temp_X_mat_actual[i,4] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Imnaha_River")$natal_origin_numeric){ # Imnaha River
+      temp_X_mat_actual[i,5] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Salmon_River")$natal_origin_numeric){ # Salmon River
+      temp_X_mat_actual[i,6] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Tucannon_River")$natal_origin_numeric){ # Tucannon River
+      temp_X_mat_actual[i,7] <- 1
     }
   }
   
   # Create a design matrix for year effects - each origin gets an effect, and these are only inside DPS boundaries
-  year_X_mat_actual <- matrix(0, nrow = n.ind, ncol = 3)
+  # columns = norigins
+  year_X_mat_actual <- matrix(0, nrow = n.ind, ncol = norigins)
   
   for (i in 1:n.ind){
-    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Wenatchee_River")$natal_origin_numeric){ # Wenatchee River
+    if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Asotin_Creek")$natal_origin_numeric){ # Asotin Creek
       year_X_mat_actual[i,1] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Entiat_River")$natal_origin_numeric){ # Entiat River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Clearwater_River")$natal_origin_numeric){ # Clearwater River
       year_X_mat_actual[i,2] <- 1
     }
-    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Methow_River")$natal_origin_numeric){ # Methow River
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Grande_Ronde_River")$natal_origin_numeric){ # Grande Ronde River
       year_X_mat_actual[i,3] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Imnaha_River")$natal_origin_numeric){ # Imnaha River
+      year_X_mat_actual[i,4] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Salmon_River")$natal_origin_numeric){ # Salmon River
+      year_X_mat_actual[i,5] <- 1
+    }
+    else if (fish_sim_cat_data_actual$natal_origin[i] == subset(origin_numeric, natal_origin == "Tucannon_River")$natal_origin_numeric){ # Tucannon River
+      year_X_mat_actual[i,6] <- 1
     }
   }
   
@@ -1400,13 +1449,16 @@ n.ind <- dim(state_data)[3]
   # origins for which that state qualifies as a post-overshoot state
   
   # Note that this needs to change for the DPS, but not for hatchery vs. wild
-  post_overshoot_combos_UC <- list(c("Wenatchee_River"),
-                                   c("Wenatchee_River","Entiat_River"),
-                                   c("Wenatchee_River","Entiat_River", "Okanogan River", "Methow River"),
-                                   c("Wenatchee_River","Entiat_River", "Okanogan River", "Methow River"))
+  post_overshoot_combos_SR <- list(c("Asotin_Creek", "Clearwater_River", "Grande_Ronde_River", "Imnaha_River", "Salmon_River", "Tucannon_River"),
+                                   c("Asotin_Creek", "Clearwater_River", "Grande_Ronde_River", "Imnaha_River", "Salmon_River", "Tucannon_River"),
+                                   c("Asotin_Creek", "Clearwater_River", "Grande_Ronde_River", "Imnaha_River", "Salmon_River", "Tucannon_River"),
+                                   c("Asotin_Creek", "Clearwater_River", "Grande_Ronde_River", "Imnaha_River", "Salmon_River", "Tucannon_River"),
+                                   "Tucannon_River")
   
-  names(post_overshoot_combos_UC) <- c("mainstem, RRE to WEL", "mainstem, upstream of WEL",
-                                       "mainstem, ICH to LGR", "mainstem, upstream of LGR")
+  names(post_overshoot_combos_SR) <- c("mainstem, PRA to RIS",
+                                       "mainstem, RIS to RRE", "mainstem, RRE to WEL",
+                                       "mainstem, upstream of WEL",
+                                       "mainstem, upstream of LGR")
   
   # a function that takes states_complete and takes post_overshoot combos and a month
   # and returns a vector of movements that qualify as potentially post-overshoot fallback
@@ -1486,7 +1538,7 @@ n.ind <- dim(state_data)[3]
   # run it for jan, feb, march - for winter spill days
   
   winter_post_overshoot_vector <- post_overshoot_vector(states_complete = states_complete_noloss, 
-                                                     post_overshoot_combos = post_overshoot_combos_UC,
+                                                     post_overshoot_combos = post_overshoot_combos_SR,
                                     month_numeric = c(1,2,3))
 
   
@@ -1518,6 +1570,15 @@ n.ind <- dim(state_data)[3]
   state_transitions %>% 
     ungroup() %>% 
     count(from, to) -> transition_counts
+  
+  write.csv(from_state_transition_counts,
+            "SRW_from_state_transition_counts.csv",
+            row.names = FALSE)
+  
+  write.csv(transition_counts,
+            "SRW_transition_counts.csv",
+            row.names = FALSE)
+  
   
   # some data checks
   table(state_transitions$transition)
@@ -1623,23 +1684,28 @@ n.ind <- dim(state_data)[3]
   movements_df %>% 
     mutate(river_mouth_mainstem_movement = ifelse(row %in% river_mouth_indices & col %in% mainstem_indices, 1, 0)) -> movements_df
   
-  upper_columbia_movements <- subset(movements_df, row %in% c(4,5,6,7,seq(22,29,1),40) |
-                                       col %in% c(4,5,6,7,seq(22,29,1),40))
+  # Determine which movements are within DPS boundaries
+  # model_states_df is helpful in this regard
   
-  non_upper_columbia_movements  <- subset(movements_df, !(row %in% c(4,5,6,7,seq(22,29,1),40)) &
-                                            !(col %in% c(4,5,6,7,seq(24,29,1),40)))
+  snake_river_movements <- subset(movements_df, row %in% c(8,9,seq(30,38,1)) |
+                                    col %in% c(8,9,seq(30,38,1)))
+  
+  non_snake_river_movements  <- subset(movements_df, !(row %in% c(8,9,seq(30,38,1))) &
+                                         !(col %in% c(8,9,seq(30,38,1))))
   
   # I think these both need to be order by from (rows), to (columns)
-  upper_columbia_movements %>% 
-    arrange(row, col) -> upper_columbia_movements
+  snake_river_movements %>% 
+    arrange(row, col) -> snake_river_movements
   
-  # make a version of this for tempxorigin 
-  upper_columbia_movements %>% 
+  # make a version of this for tempxorigin; tempxorigin is only for within DPS
+  # boundaries, but has additional criteria (i.e., only for upstream movements
+  # or movements into tributaries)
+  snake_river_movements %>% 
     filter(!(col == (row - 1))) %>% 
     filter(!(row == 8 & col == 3)) %>% 
     # remove all movements from tributaries back to the mainstem
     filter(!(col < 10 & row >= 10)) %>% 
-    mutate(row_col = paste0(row, "_", col)) -> upper_columbia_tempxorigin
+    mutate(row_col = paste0(row, "_", col)) -> snake_river_tempxorigin
   
   
   b0_matrix_names %>% 
@@ -1652,10 +1718,10 @@ n.ind <- dim(state_data)[3]
     mutate(row_col = paste0(row, "_", col)) -> fallback_movements
   
   # create parameter names for spill by month parameters
-  # post-overshoot fallback movements in the upper columbia DPS: 6 -> 5, 7 -> 6, 8 -> 3, 9 -> 8
+  # possible post-overshoot fallback movements for snake river DPS fish: upper columbia (4-7) states to previous or 9->8
   
   fallback_movements %>% 
-    filter(row %in% c(6, 7, 8, 9)) -> post_overshoot_fallback_movements
+    filter(row %in% c(4,5,6,7,9)) -> post_overshoot_fallback_movements
   
   # create parameter name dfs for each of these
   b0_matrix_names %>% 
@@ -1675,16 +1741,14 @@ n.ind <- dim(state_data)[3]
   
   ### 2024-03-07 modification ###
   # change b0 to not have any intercept terms for movements that also have origin terms
-  # basically, just remove all upper_columbia_movements from the b0_matrix_names
+  # basically, just remove all snake_river_movements from the b0_matrix_names
   
-  upper_columbia_movements %>% 
-    mutate(movement_abbrev = paste0(row, "_", col)) -> upper_columbia_movements
+  snake_river_movements %>% 
+    mutate(movement_abbrev = paste0(row, "_", col)) -> snake_river_movements
   
   b0_matrix_names %>% 
     mutate(movement_abbrev = paste0(row, "_", col)) %>% 
-    filter(!(movement_abbrev %in% upper_columbia_movements$movement_abbrev)) -> b0_matrix_names
-  
-  
+    filter(!(movement_abbrev %in% snake_river_movements$movement_abbrev)) -> b0_matrix_names
   
   
   # print declaration of b0_matrix parameters - distinguish which need two versions based on mainstem_trib_movement column
@@ -1777,7 +1841,7 @@ n.ind <- dim(state_data)[3]
   # REMOVE ALL THE ONES WITHIN THE ESU - these are only origin-specific
   btemp_matrix_names %>% 
     mutate(row_col = paste0(row, "_", col)) %>% 
-    filter(!(row_col %in% upper_columbia_tempxorigin$row_col)) -> btemp_matrix_names
+    filter(!(row_col %in% snake_river_tempxorigin$row_col)) -> btemp_matrix_names
   
   
   
@@ -1858,70 +1922,70 @@ n.ind <- dim(state_data)[3]
     arrange(row,col) -> btempxorigin_matrix_names
   
   # print only for the movements that are within the ESU
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_tempxorigin)){
+  for (i in 1:norigins){ # loop goes 1:norigins
+    for (j in 1:nrow(snake_river_tempxorigin)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_tempxorigin$mainstem_river_mouth_movement[j] == 1){
-        cat("real ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
-        cat("real ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
-        cat("real ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
-        cat("real ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
+      if (snake_river_tempxorigin$mainstem_river_mouth_movement[j] == 1){
+        cat("real ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
+        cat("real ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
+        cat("real ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
+        cat("real ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_tempxorigin$within_trib_movement[j] == 1){
+      else if (snake_river_tempxorigin$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it
-      else if (upper_columbia_tempxorigin$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_tempxorigin$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # If we move from the river mouth state to the mainstem, we want a parameter - this is captured in the below
       # BUT - if it's a movement from the upstream state to the mainstem, we don't want a parameter.
       # these transitions will get the same parameters as the river mouth to mainstem
-      else if (upper_columbia_tempxorigin$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_tempxorigin$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("real ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], ";", "\n", sep = "")
-        cat("real ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], ";", "\n", sep = "")
+        cat("real ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], ";", "\n", sep = "")
+        cat("real ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], ";", "\n", sep = "")
       }
       
     }
     cat ("\n")
   }
   
-  # In this ESU, there are four origins, so we will have three origin parameters
+  # In this ESU, there are four origins, so we will have four origin parameters
   # We will only allow an origin effect within the ESU (so after PRA). Before, they will only have an intercept term
   # print declaration of borigin parameters
-  for (i in 1:3){ # since we only have three origins for wild, we will only go i in 1:3
-    for (j in 1:nrow(upper_columbia_movements)){
+  for (i in 1:norigins){ # we need one origin parameter per origin
+    for (j in 1:nrow(snake_river_movements)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_movements$mainstem_river_mouth_movement[j] == 1){
-        cat("real ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], "_DE", ";", "\n", sep = "")
-        cat("real ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], "_NDE", ";", "\n", sep = "")
+      if (snake_river_movements$mainstem_river_mouth_movement[j] == 1){
+        cat("real ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], "_DE", ";", "\n", sep = "")
+        cat("real ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], "_NDE", ";", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_movements$within_trib_movement[j] == 1){
+      else if (snake_river_movements$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it
-      else if (upper_columbia_movements$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_movements$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # If we move from the river mouth state to the mainstem, we want a parameter - this is captured in the below
       # BUT - if it's a movement from the upstream state to the mainstem, we don't want a parameter.
       # these transitions will get the same parameters as the river mouth to mainstem
-      else if (upper_columbia_movements$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_movements$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("real ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], ";", "\n", sep = "")
+        cat("real ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], ";", "\n", sep = "")
       }
       
     }
@@ -1935,36 +1999,36 @@ n.ind <- dim(state_data)[3]
   # First, filter out the movements that aren't getting a RE of year
   # based on rownames(transition_matrix), tributaries start at state 10; drop
   # all movements from those states
-  upper_columbia_movements %>% 
+  snake_river_movements %>% 
     filter(!(row>=10)) %>% 
-    mutate(row_col = paste0(row, "_", col)) -> upper_columbia_RE_year
+    mutate(row_col = paste0(row, "_", col)) -> snake_river_RE_year
   
   
   # Now for each origin, print parameter names - first the raw vector
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # one parameter per origin
+    for (j in 1:nrow(snake_river_RE_year)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("vector[nyears] ", "byearxorigin", i, "_raw_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
-        cat("vector[nyears] ", "byearxorigin", i, "_raw_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE", ";", "\n", sep = "")
+      if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("vector[nyears] ", "byearxorigin", i, "_raw_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE", ";", "\n", sep = "")
+        cat("vector[nyears] ", "byearxorigin", i, "_raw_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE", ";", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it - because this is a shared parameter with movement from mainstem to river mouth
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # There are no year effects for movements from tributaries, but this doesn't matter because it should have been removed earlier
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("vector[nyears] ", "byearxorigin", i, "_raw_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ";", "\n", sep = "")
+        cat("vector[nyears] ", "byearxorigin", i, "_raw_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ";", "\n", sep = "")
       }
       
     }
@@ -1972,48 +2036,45 @@ n.ind <- dim(state_data)[3]
   }
   
   ## Then print the sigma
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # loop is 1:norigins
+    for (j in 1:nrow(snake_river_RE_year)){
       
       # If this is a post-overshoot fallback movement, print out a commented out version
-      # Origin 1: Wenatchee River: 7-6 and 6-5 are both post-overshoot fallback movements within the DPS
-      # Origin 2: Entiat River: 6-5 is a post-overshoot fallback movement within the DPS
-      # Origin 3: Methow River: no post-overshoot fallback movements within the DPS
+      # Origin 1: Asotin Creek: No post-overshoot fallback movements within the DPS
+      # Origin 2: Clearwater River: No post-overshoot fallback movements within the DPS
+      # Origin 3: Grande Ronde River: No post-overshoot fallback movements within the DPS
+      # Origin 4: Imnaha River: No post-overshoot fallback movements within the DPS
+      # Origin 5: Salmon River: No post-overshoot fallback movements within the DPS
+      # Origin 6: Tucannon River: 9-8 is a post-overshoot fallback movement within the DPS
       
-      # this is for the Wenatchee
-      if(upper_columbia_RE_year$row[j] == 7 & upper_columbia_RE_year$col[j] == 6 & i == 1 |
-         upper_columbia_RE_year$row[j] == 6 & upper_columbia_RE_year$col[j] == 5 & i == 1){
-        cat("// real<lower=0> ", "sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
-      }
-      
-      # this is for the Entiat River
-      else if(upper_columbia_RE_year$row[j] == 7 & upper_columbia_RE_year$col[j] == 6 & i == 2 ){
-        cat("// real<lower=0> ", "sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
-      }
+      # this is for origins where 9-8 is a post-overshoot fallback movement
+      if(snake_river_RE_year$row[j] == 9 & snake_river_RE_year$col[j] == 8 & i == 6){
+        cat("// real<lower=0> ", "sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE", ";", "\n", sep = "")
+      } 
       
       # Movements from mainstem to river mouth: print two versions
-      else if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", ";", "\n", sep = "")
-        cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE", ";", "\n", sep = "")
+      else if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE", ";", "\n", sep = "")
+        cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE", ";", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # If we move from the river mouth state to the mainstem, we want a parameter - this is captured in the below
       # BUT - if it's a movement from the upstream state to the mainstem, we don't want a parameter.
       # these transitions will get the same parameters as the river mouth to mainstem
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ";", "\n", sep = "")
+        cat("real<lower=0> ", "sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ";", "\n", sep = "")
       }
       
     }
@@ -2065,11 +2126,10 @@ n.ind <- dim(state_data)[3]
   # are now only getting an origin term.
   
   ### 2024-03-09 edits - add a zero for everything in the intercept vector
-  for (i in 1:nrow(upper_columbia_movements)){
-    cat("b0_vector_DE[", parameter_indices_matrix[upper_columbia_movements$row[i], upper_columbia_movements$col[i]], "]", " = 0;", "\n", sep = "")
-    cat("b0_vector_NDE[", parameter_indices_matrix[upper_columbia_movements$row[i], upper_columbia_movements$col[i]], "]", " = 0;", "\n", sep = "")
+  for (i in 1:nrow(snake_river_movements)){
+    cat("b0_vector_DE[", parameter_indices_matrix[snake_river_movements$row[i], snake_river_movements$col[i]], "]", " = 0;", "\n", sep = "")
+    cat("b0_vector_NDE[", parameter_indices_matrix[snake_river_movements$row[i], snake_river_movements$col[i]], "]", " = 0;", "\n", sep = "")
   }
-  
   
   
   # We only need one matrix for spill, because none of these are DE corrected
@@ -2089,39 +2149,39 @@ n.ind <- dim(state_data)[3]
   
   ## Year effects
   # 1. store the individual byear_raw vectors into the matrix that contains all of them
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # loop is 1:norigins
+    for (j in 1:nrow(snake_river_RE_year)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("byearxorigin", i, "_raw_parameters_matrix_DE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE);", "\n", sep = "")
-        cat("byearxorigin", i, "_raw_parameters_matrix_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE);", "\n", sep = "")
+      if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("byearxorigin", i, "_raw_parameters_matrix_DE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE);", "\n", sep = "")
+        cat("byearxorigin", i, "_raw_parameters_matrix_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE);", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream:
       # For NDE - give it the same parameter as the one for the mainstem to the river mouth site (which by index, is the site before)
       # For DE - do nothing - it'll just keep the zero from before
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
-        cat("byearxorigin", i, "_raw_parameters_matrix_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j-1], "_", upper_columbia_RE_year$col[j-1], "_NDE);", "\n", sep = "")
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
+        cat("byearxorigin", i, "_raw_parameters_matrix_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j-1], "_", snake_river_RE_year$col[j-1], "_NDE);", "\n", sep = "")
       } 
       # For year effects, there is no RE of year when moving from a tributary to the mainstem. So we will not do anything here.
       # These should not be in the movement df though, so it shouldn't matter.
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("byearxorigin", i, "_raw_parameters_matrix_DE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ");", "\n", sep = "")
-        cat("byearxorigin", i, "_raw_parameters_matrix_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ");", "\n", sep = "")
+        cat("byearxorigin", i, "_raw_parameters_matrix_DE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ");", "\n", sep = "")
+        cat("byearxorigin", i, "_raw_parameters_matrix_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ");", "\n", sep = "")
       }
       
     }
@@ -2129,39 +2189,39 @@ n.ind <- dim(state_data)[3]
   }
   
   # 2. Write out the conversion from raw * sigma into actual
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # loop is 1:norigins
+    for (j in 1:nrow(snake_river_RE_year)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("byearxorigin", i, "_actual_parameters_matrix_DE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE * sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE);", "\n", sep = "")
-        cat("byearxorigin", i, "_actual_parameters_matrix_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE * sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE);", "\n", sep = "")
+      if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("byearxorigin", i, "_actual_parameters_matrix_DE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE * sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE);", "\n", sep = "")
+        cat("byearxorigin", i, "_actual_parameters_matrix_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE * sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE);", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream:
       # For NDE - give it the same parameter as the one for the mainstem to the river mouth site (which by index, is the site before)
       # For DE - do nothing - it'll just keep the zero from before
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
-        cat("byearxorigin", i, "_actual_parameters_matrix_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j-1], "_", upper_columbia_RE_year$col[j-1], "_NDE * sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j-1], "_", upper_columbia_RE_year$col[j-1], "_NDE);", "\n", sep = "")
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
+        cat("byearxorigin", i, "_actual_parameters_matrix_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j-1], "_", snake_river_RE_year$col[j-1], "_NDE * sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j-1], "_", snake_river_RE_year$col[j-1], "_NDE);", "\n", sep = "")
       } 
       # For year effects, there is no RE of year when moving from a tributary to the mainstem. So we will not do anything here.
       # These should not be in the movement df though, so it shouldn't matter.
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("byearxorigin", i, "_actual_parameters_matrix_DE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], " * sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ");", "\n", sep = "")
-        cat("byearxorigin", i, "_actual_parameters_matrix_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
-            upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], " * sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ");", "\n", sep = "")
+        cat("byearxorigin", i, "_actual_parameters_matrix_DE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], " * sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ");", "\n", sep = "")
+        cat("byearxorigin", i, "_actual_parameters_matrix_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], ", ] = to_array_1d(byearxorigin", i, "_raw_vector_",
+            snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], " * sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ");", "\n", sep = "")
       }
       
     }
@@ -2169,39 +2229,39 @@ n.ind <- dim(state_data)[3]
   }
   
   # 3. Store the sigma parameters in the vector that contains all of them
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # 1:norigins
+    for (j in 1:nrow(snake_river_RE_year)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("sigma_yearxorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], 
-            "] = sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE;", "\n", sep = "")
-        cat("sigma_yearxorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], 
-            "] = sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE;", "\n", sep = "")
+      if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("sigma_yearxorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], 
+            "] = sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE;", "\n", sep = "")
+        cat("sigma_yearxorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], 
+            "] = sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE;", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream:
       # For NDE - give it the same parameter as the one for the mainstem to the river mouth site (which by index, is the site before)
       # For DE - do nothing - it'll just keep the zero from before
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
-        cat("sigma_yearxorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], 
-            "] = sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j-1], "_", upper_columbia_RE_year$col[j-1], "_NDE;", "\n", sep = "")
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
+        cat("sigma_yearxorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], 
+            "] = sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j-1], "_", snake_river_RE_year$col[j-1], "_NDE;", "\n", sep = "")
       } 
       # For year effects, there is no RE of year when moving from a tributary to the mainstem. So we will not do anything here.
       # These should not be in the movement df though, so it shouldn't matter.
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("sigma_yearxorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], 
-            "] = sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ";", "\n", sep = "")
-        cat("sigma_yearxorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_RE_year$row[j], upper_columbia_RE_year$col[j]], 
-            "] = sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], ";", "\n", sep = "")
+        cat("sigma_yearxorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], 
+            "] = sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ";", "\n", sep = "")
+        cat("sigma_yearxorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_RE_year$row[j], snake_river_RE_year$col[j]], 
+            "] = sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], ";", "\n", sep = "")
       }
       
     }
@@ -2253,42 +2313,42 @@ n.ind <- dim(state_data)[3]
   
   
   # Write out the tempxorigin matrix - DE
-  for (i in 1:3){
-    for (j in 1:nrow(upper_columbia_tempxorigin)){
+  for (i in 1:norigins){ # one per origin
+    for (j in 1:nrow(snake_river_tempxorigin)){
       # Movements from mainstem to river mouth: store the two different versions
-      if (upper_columbia_tempxorigin$mainstem_river_mouth_movement[j] == 1){
-        cat("btemp0xorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
-        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
+      if (snake_river_tempxorigin$mainstem_river_mouth_movement[j] == 1){
+        cat("btemp0xorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
+        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_DE", ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_NDE", ";", "\n", sep = "")
         
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_tempxorigin$within_trib_movement[j] == 1){
+      else if (snake_river_tempxorigin$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream:
       # For NDE - give it the same parameter as the one for the mainstem to the river mouth site (which by index, is the site before)
       # For DE - we don't care about this, because we're removing the upstream states
-      else if (upper_columbia_tempxorigin$mainstem_upstream_movement[j] == 1){
-        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j-1], "_", upper_columbia_tempxorigin$col[j-1], "_NDE", ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j-1], "_", upper_columbia_tempxorigin$col[j-1], "_NDE", ";", "\n", sep = "")
+      else if (snake_river_tempxorigin$mainstem_upstream_movement[j] == 1){
+        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j-1], "_", snake_river_tempxorigin$col[j-1], "_NDE", ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j-1], "_", snake_river_tempxorigin$col[j-1], "_NDE", ";", "\n", sep = "")
         
       }
       # If it's a movement from the upstream state back to the mainstem, give it the same parameter as movement from the river mouth to the upstream
       # And note - that these are not DE or NDE parameters
-      else if (upper_columbia_tempxorigin$upstream_mainstem_movement[j] == 1){
-        cat("btemp0xorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j-1], "_", upper_columbia_tempxorigin$col[j],  ";", "\n", sep = "")
-        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j-1], "_", upper_columbia_tempxorigin$col[j], ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j-1], "_", upper_columbia_tempxorigin$col[j],  ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j-1], "_", upper_columbia_tempxorigin$col[j], ";", "\n", sep = "")
+      else if (snake_river_tempxorigin$upstream_mainstem_movement[j] == 1){
+        cat("btemp0xorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j-1], "_", snake_river_tempxorigin$col[j],  ";", "\n", sep = "")
+        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j-1], "_", snake_river_tempxorigin$col[j], ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j-1], "_", snake_river_tempxorigin$col[j],  ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j-1], "_", snake_river_tempxorigin$col[j], ";", "\n", sep = "")
         # If it's not, store the same parameter in both matrices
       } else {
-        cat("btemp0xorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], ";", "\n", sep = "")
-        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j],  ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], ";", "\n", sep = "")
-        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_tempxorigin$row[j], upper_columbia_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j],  ";", "\n", sep = "")
+        cat("btemp0xorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], ";", "\n", sep = "")
+        cat("btemp0xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j],  ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], ";", "\n", sep = "")
+        cat("btemp1xorigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_tempxorigin$row[j], snake_river_tempxorigin$col[j]], "]", " = ", "btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j],  ";", "\n", sep = "")
       }
       
     }
@@ -2297,38 +2357,37 @@ n.ind <- dim(state_data)[3]
   }
   
   
-  # There are three wild origins, so we need three transformed parameters vectors
-  for (i in 1:3){
-    for (j in 1:nrow(upper_columbia_movements)){
-      
+  # We need one parameter for each origin
+  for (i in 1:norigins){
+    for (j in 1:nrow(snake_river_movements)){
       # Movements from mainstem to river mouth: store the two different versions
-      if (upper_columbia_movements$mainstem_river_mouth_movement[j] == 1){
-        cat("borigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], "_DE", ";", "\n", sep = "")
-        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], "_NDE", ";", "\n", sep = "")
+      if (snake_river_movements$mainstem_river_mouth_movement[j] == 1){
+        cat("borigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], "_DE", ";", "\n", sep = "")
+        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], "_NDE", ";", "\n", sep = "")
         
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_movements$within_trib_movement[j] == 1){
+      else if (snake_river_movements$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream:
       # For NDE - give it the same parameter as the one for the mainstem to the river mouth site (which by index, is the site before)
       # For DE - we don't care about this, because we're removing the upstream states
-      else if (upper_columbia_movements$mainstem_upstream_movement[j] == 1){
-        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j-1], "_", upper_columbia_movements$col[j-1], "_NDE", ";", "\n", sep = "")
+      else if (snake_river_movements$mainstem_upstream_movement[j] == 1){
+        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j-1], "_", snake_river_movements$col[j-1], "_NDE", ";", "\n", sep = "")
         
       }
       # If it's a movement from the upstream state back to the mainstem, give it the same parameter as movement from the river mouth to the upstream
       # However, this movement isn't possible in DE, so don't include those
       # And note - that these are not DE or NDE parameters
-      else if (upper_columbia_movements$upstream_mainstem_movement[j] == 1){
-        # cat("borigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j-1], "_", upper_columbia_movements$col[j],  ";", "\n", sep = "")
-        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j-1], "_", upper_columbia_movements$col[j], ";", "\n", sep = "")
+      else if (snake_river_movements$upstream_mainstem_movement[j] == 1){
+        # cat("borigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j-1], "_", snake_river_movements$col[j],  ";", "\n", sep = "")
+        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j-1], "_", snake_river_movements$col[j], ";", "\n", sep = "")
         # If it's not, store the same parameter in both matrices
       } else {
-        cat("borigin", i, "_vector_DE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], ";", "\n", sep = "")
-        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[upper_columbia_movements$row[j], upper_columbia_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j],  ";", "\n", sep = "")
+        cat("borigin", i, "_vector_DE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], ";", "\n", sep = "")
+        cat("borigin", i, "_vector_NDE[", parameter_indices_matrix[snake_river_movements$row[j], snake_river_movements$col[j]], "]", " = ", "borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j],  ";", "\n", sep = "")
       }
       
     }
@@ -2381,6 +2440,7 @@ n.ind <- dim(state_data)[3]
   
   # window_spill priors
   # note that because none of these are movements into tributaries, we never need to print DE vs NDE versions
+  # 2024-02-05: Change these priors to (0,1)
   for (i in 1:(nrow(bspillwindow_matrix_names))){
     cat(bspillwindow_matrix_names$bspillwindow_matrix_name[i]," ~ normal(0,5);", "\n", sep = "")
   }
@@ -2441,70 +2501,68 @@ n.ind <- dim(state_data)[3]
   
   # Priors for btempxorigin (interaction) parameters
   # print only for the movements that are within the ESU
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_tempxorigin)){
+  for (i in 1:norigins){ # one per origin
+    for (j in 1:nrow(snake_river_tempxorigin)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_tempxorigin$mainstem_river_mouth_movement[j] == 1){
-        cat("btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_DE", " ~ normal(0,5);", "\n", sep = "")
-        cat("btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_NDE", " ~ normal(0,5);", "\n", sep = "")
-        cat("btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_DE", " ~ normal(0,5);", "\n", sep = "")
-        cat("btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], "_NDE", " ~ normal(0,5);", "\n", sep = "")
+      if (snake_river_tempxorigin$mainstem_river_mouth_movement[j] == 1){
+        cat("btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_DE", " ~ normal(0,5);", "\n", sep = "")
+        cat("btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_NDE", " ~ normal(0,5);", "\n", sep = "")
+        cat("btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_DE", " ~ normal(0,5);", "\n", sep = "")
+        cat("btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], "_NDE", " ~ normal(0,5);", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_tempxorigin$within_trib_movement[j] == 1){
+      else if (snake_river_tempxorigin$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it
-      else if (upper_columbia_tempxorigin$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_tempxorigin$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # If we move from the river mouth state to the mainstem, we want a parameter - this is captured in the below
       # BUT - if it's a movement from the upstream state to the mainstem, we don't want a parameter.
       # these transitions will get the same parameters as the river mouth to mainstem
-      else if (upper_columbia_tempxorigin$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_tempxorigin$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("btemp0xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], " ~ normal(0,5);", "\n", sep = "")
-        cat("btemp1xorigin", i, "_matrix_", upper_columbia_tempxorigin$row[j], "_", upper_columbia_tempxorigin$col[j], " ~ normal(0,5);", "\n", sep = "")
+        cat("btemp0xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], " ~ normal(0,5);", "\n", sep = "")
+        cat("btemp1xorigin", i, "_matrix_", snake_river_tempxorigin$row[j], "_", snake_river_tempxorigin$col[j], " ~ normal(0,5);", "\n", sep = "")
       }
       
     }
     cat ("\n")
   }
   
-  # In this ESU, there are three origins, so we will have three origin parameters
-  # We will only allow an origin effect within the ESU (so after PRA). Before, they will only have an intercept term
-  # print priors for borigin parameters
-  for (i in 1:3){ # since we only have three origins for wild, we will only go i in 1:2
-    for (j in 1:nrow(upper_columbia_movements)){
+  # Priors for borigin parameters
+  for (i in 1:norigins){ # one for each origin
+    for (j in 1:nrow(snake_river_movements)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_movements$mainstem_river_mouth_movement[j] == 1){
-        cat("borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], "_DE", " ~ normal(0,5);", "\n", sep = "")
-        cat("borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], "_NDE", " ~ normal(0,5);", "\n", sep = "")
+      if (snake_river_movements$mainstem_river_mouth_movement[j] == 1){
+        cat("borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], "_DE", " ~ normal(0,5);", "\n", sep = "")
+        cat("borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], "_NDE", " ~ normal(0,5);", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_movements$within_trib_movement[j] == 1){
+      else if (snake_river_movements$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it
-      else if (upper_columbia_movements$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_movements$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # If we move from the river mouth state to the mainstem, we want a parameter - this is captured in the below
       # BUT - if it's a movement from the upstream state to the mainstem, we don't want a parameter.
       # these transitions will get the same parameters as the river mouth to mainstem
-      else if (upper_columbia_movements$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_movements$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("borigin", i, "_matrix_", upper_columbia_movements$row[j], "_", upper_columbia_movements$col[j], " ~ normal(0,5);", "\n", sep = "")
+        cat("borigin", i, "_matrix_", snake_river_movements$row[j], "_", snake_river_movements$col[j], " ~ normal(0,5);", "\n", sep = "")
       }
       
     }
@@ -2517,30 +2575,30 @@ n.ind <- dim(state_data)[3]
   
   
   # Now for each origin, first the priors for the raw vector
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # one per origin
+    for (j in 1:nrow(snake_river_RE_year)){
       
       # Movements from mainstem to river mouth: print two versions
-      if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("byearxorigin", i, "_raw_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", " ~ normal(0,1);", "\n", sep = "")
-        cat("byearxorigin", i, "_raw_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE", " ~ normal(0,1);", "\n", sep = "")
+      if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("byearxorigin", i, "_raw_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE", " ~ normal(0,1);", "\n", sep = "")
+        cat("byearxorigin", i, "_raw_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE", " ~ normal(0,1);", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it - because this is a shared parameter with movement from mainstem to river mouth
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # There are no year effects for movements from tributaries, but this doesn't matter because it should have been removed earlier
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("byearxorigin", i, "_raw_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], " ~ normal(0,1);", "\n", sep = "")
+        cat("byearxorigin", i, "_raw_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], " ~ normal(0,1);", "\n", sep = "")
       }
       
     }
@@ -2548,46 +2606,44 @@ n.ind <- dim(state_data)[3]
   }
   
   ## Then priors on the sigma parameters
-  for (i in 1:3){ # since we only have three origins for wild
-    for (j in 1:nrow(upper_columbia_RE_year)){
+  for (i in 1:norigins){ # same as number of origins
+    for (j in 1:nrow(snake_river_RE_year)){
+      
       # If this is a post-overshoot fallback movement, print out a commented out version
-      # Origin 1: Wenatchee River: 7-6 and 6-5 are both post-overshoot fallback movements within the DPS
-      # Origin 2: Entiat River: 6-5 is a post-overshoot fallback movement within the DPS
-      # Origin 3: Methow River: no post-overshoot fallback movements within the DPS
+      # Origin 1: Asotin Creek: No post-overshoot fallback movements within the DPS
+      # Origin 2: Clearwater River: No post-overshoot fallback movements within the DPS
+      # Origin 3: Grande Ronde River: No post-overshoot fallback movements within the DPS
+      # Origin 4: Imnaha River: No post-overshoot fallback movements within the DPS
+      # Origin 5: Salmon River: No post-overshoot fallback movements within the DPS
+      # Origin 6: Tucannon River: 9-8 is a post-overshoot fallback movement within the DPS
       
-      # this is for the Wenatchee
-      if(upper_columbia_RE_year$row[j] == 7 & upper_columbia_RE_year$col[j] == 6 & i == 1 |
-         upper_columbia_RE_year$row[j] == 6 & upper_columbia_RE_year$col[j] == 5 & i == 1){
-        cat("// sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", " ~ cauchy(0,1);", "\n", sep = "")
-      }
-      
-      # this is for the Entiat River
-      else if(upper_columbia_RE_year$row[j] == 7 & upper_columbia_RE_year$col[j] == 6 & i == 2 ){
-        cat("// sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", " ~ cauchy(0,1);", "\n", sep = "")
-      }
+      # this is for origins where 9-8 is a post-overshoot fallback movement
+      if(snake_river_RE_year$row[j] == 9 & snake_river_RE_year$col[j] == 8 & i == 6){
+        cat("// sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE", " ~ cauchy(0,1);", "\n", sep = "")
+      } 
       # Movements from mainstem to river mouth: print two versions
-      else if (upper_columbia_RE_year$mainstem_river_mouth_movement[j] == 1){
-        cat("sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_DE", " ~ cauchy(0,1);", "\n", sep = "")
-        cat("sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], "_NDE", " ~ cauchy(0,1);", "\n", sep = "")
+      else if (snake_river_RE_year$mainstem_river_mouth_movement[j] == 1){
+        cat("sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_DE", " ~ cauchy(0,1);", "\n", sep = "")
+        cat("sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], "_NDE", " ~ cauchy(0,1);", "\n", sep = "")
       }
       
       # If it's a within tributary movement - we don't want it
-      else if (upper_columbia_RE_year$within_trib_movement[j] == 1){
+      else if (snake_river_RE_year$within_trib_movement[j] == 1){
         # do nothing!
       }
       # If it's a movement from mainstem to upstream - we also don't want it
-      else if (upper_columbia_RE_year$mainstem_upstream_movement[j] == 1){
+      else if (snake_river_RE_year$mainstem_upstream_movement[j] == 1){
         # do nothing!
       } 
       # If we move from the river mouth state to the mainstem, we want a parameter - this is captured in the below
       # BUT - if it's a movement from the upstream state to the mainstem, we don't want a parameter.
       # these transitions will get the same parameters as the river mouth to mainstem
-      else if (upper_columbia_RE_year$upstream_mainstem_movement[j] == 1){
+      else if (snake_river_RE_year$upstream_mainstem_movement[j] == 1){
         # do nothing!
       } else {
         # Finally - if it's any other movement, just treat it like normal!
         # If it's not, print just the one version
-        cat("sigma_yearxorigin", i, "_vector_", upper_columbia_RE_year$row[j], "_", upper_columbia_RE_year$col[j], " ~ cauchy(0,1);", "\n", sep = "")
+        cat("sigma_yearxorigin", i, "_vector_", snake_river_RE_year$row[j], "_", snake_river_RE_year$col[j], " ~ cauchy(0,1);", "\n", sep = "")
       }
       
     }
@@ -2620,5 +2676,5 @@ n.ind <- dim(state_data)[3]
   
   
   
-  save(data, file = "Stan/upper_columbia_wild/UCW_model_data.rda")
-  
+  # save(data, file = here::here("Stan", "snake_river_wild", "SRW_model_data.rda"))
+  save(data, file = "Stan/snake_river_wild_not_transported/SRW_NT_model_data.rda")

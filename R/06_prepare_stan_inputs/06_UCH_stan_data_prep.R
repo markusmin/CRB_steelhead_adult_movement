@@ -424,6 +424,13 @@ river_mouth_indices <- upstream_indices - 1
 #                                        "upper_columbia_adults_states_complete.csv"), row.names = 1)
 states_complete <- read.csv("intermediate_outputs/adults_states_complete/upper_columbia_adults_states_complete.csv", row.names = 1)
 
+# load and join transport data
+transport_data <- read.csv(here::here("Data", "covariate_data", "model_inputs", "transport.csv"))
+
+states_complete %>% 
+  left_join(., transport_data, by = join_by(tag_code == tag_id)) %>% 
+  mutate(transport = ifelse(is.na(transport), 0, transport)) -> states_complete
+
 ### KEEP ONLY THE HATCHERY ORIGIN FISH
 # tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
 tag_code_metadata <- read.csv("Data/covariate_data/tag_code_metadata.csv")

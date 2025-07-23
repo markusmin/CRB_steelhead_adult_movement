@@ -425,6 +425,14 @@ river_mouth_indices <- upstream_indices - 1
 #                                        "snake_adults_states_complete.csv"), row.names = 1)
 states_complete <- read.csv("intermediate_outputs/adults_states_complete/snake_adults_states_complete.csv", row.names = 1)
 
+# load and join transport data
+transport_data <- read.csv(here::here("Data", "covariate_data", "model_inputs", "transport.csv"))
+
+states_complete %>% 
+  left_join(., transport_data, by = join_by(tag_code == tag_id)) %>% 
+  mutate(transport = ifelse(is.na(transport), 0, transport)) -> states_complete
+
+
 ### KEEP ONLY THE HATCHERY ORIGIN FISH
 # tag_code_metadata <- read.csv(here::here("Data", "covariate_data", "tag_code_metadata.csv"))
 tag_code_metadata <- read.csv("Data/covariate_data/tag_code_metadata.csv")
@@ -445,9 +453,13 @@ states_complete %>%
   filter(!duplicated(tag_code_2)) %>% 
   count(natal_origin) -> SR_hatchery_origin_table
 
+# check transport vs natal origin
+states_complete %>% 
+  filter(!duplicated(tag_code_2)) %>% 
+  count(natal_origin, transport)
+
 origins_to_drop <- subset(SR_hatchery_origin_table, n < 350)$natal_origin
-# We only are keeping Umatilla and Walla Walla River fish; these tag codes are also distributed across
-# many years
+# Only dropping Asotin Creek
 subset(tag_code_metadata, natal_origin %in% origins_to_drop)$tag_code -> drop_tag_codes
 
 states_complete %>% 
