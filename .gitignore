@@ -15,9 +15,32 @@ Data/PTAGIS_queries/BON_sthd_2005-06-01_2025_01_23.csv
 Data/PTAGIS_queries/complete_tag_histories/
 Data/PTAGIS_queries/tag_codes/
 
-# Ignore the whole Stan folder because the MCMC outputs are huge
-Stan/
-Stan/detection_efficiency/
+# Ignore all MCMC outputs
+Stan/upper_columbia_hatchery/*_fit.rds
+Stan/upper_columbia_wild/*_fit.rds
+Stan/middle_columbia_hatchery/*_fit.rds
+Stan/middle_columbia_wild/*_fit.rds
+Stan/snake_river_wild/*_fit.rds
+Stan/snake_river_hatchery/*_fit.rds
+Stan/snake_river_wild_not_transported/*_fit.rds
+Stan/snake_river_wild_transported/*_fit.rds
+Stan/snake_river_hatchery_transported/*_fit.rds
+Stan/snake_river_hatchery_not_transported/*_fit.rds
+
+Stan/alternative_spill_treatment/upper_columbia_hatchery/*_fit.rds
+Stan/alternative_spill_treatment/upper_columbia_wild/*_fit.rds
+Stan/alternative_spill_treatment/middle_columbia_hatchery/*_fit.rds
+Stan/alternative_spill_treatment/middle_columbia_wild/*_fit.rds
+Stan/alternative_spill_treatment/snake_river_wild/*_fit.rds
+Stan/alternative_spill_treatment/snake_river_hatchery/*_fit.rds
+Stan/alternative_spill_treatment/snake_river_wild_not_transported/*_fit.rds
+Stan/alternative_spill_treatment/snake_river_wild_transported/*_fit.rds
+Stan/alternative_spill_treatment/snake_river_hatchery_transported/*_fit.rds
+Stan/alternative_spill_treatment/snake_river_hatchery_not_transported/*_fit.rds
+
+# Ignore any slurm output
+*slurm*
+
 
 # ignore the map files
 map_files/
