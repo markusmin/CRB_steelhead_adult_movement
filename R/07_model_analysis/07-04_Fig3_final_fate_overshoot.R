@@ -12,7 +12,7 @@
 # First, need to load in all of the model runs and all of the packages.
 source("R/07_model_analysis/07-01_load_stan_models.R")
 
-# 08-model-final-fates.R also needs to be run first, because this will compute
+# 07-03_final_fates_simulation.R also needs to be run first, because this will compute
 # the final fates based on median conditions across all runs.
 # load(here::here("figures", "final_fates", "simulation_runs", "FF_comp_data.rda"))
 
