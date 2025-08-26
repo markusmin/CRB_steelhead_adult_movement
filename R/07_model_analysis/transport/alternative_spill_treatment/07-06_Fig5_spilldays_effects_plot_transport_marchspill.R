@@ -554,7 +554,7 @@ estimate_spilldays_effect_MCH <- function(origin_select, movements){
   
 }
 
-estimate_spilldays_effect_SRW_T_marchspill_marchspill <- function(origin_select, movements){
+estimate_spilldays_effect_SRW_T_marchspill <- function(origin_select, movements){
   
   # set up vectors to control which origin parameters are turned on
   wild_origin_params <- rep(0,6)
@@ -689,7 +689,7 @@ estimate_spilldays_effect_SRW_T_marchspill_marchspill <- function(origin_select,
   
 }
 
-estimate_spilldays_effect_SRW_NT_marchspill_marchspill <- function(origin_select, movements){
+estimate_spilldays_effect_SRW_NT_marchspill <- function(origin_select, movements){
   
   # set up vectors to control which origin parameters are turned on
   wild_origin_params <- rep(0,6)
@@ -824,7 +824,7 @@ estimate_spilldays_effect_SRW_NT_marchspill_marchspill <- function(origin_select
   
 }
 
-estimate_spilldays_effect_SRH_T_marchspill_marchspill <- function(origin_select, movements){
+estimate_spilldays_effect_SRH_T_marchspill <- function(origin_select, movements){
   
   # set up vectors to control which origin parameters are turned on
   hatchery_origin_params <- rep(0,5)
@@ -952,7 +952,7 @@ estimate_spilldays_effect_SRH_T_marchspill_marchspill <- function(origin_select,
   
 } 
 
-estimate_spilldays_effect_SRH_NT_marchspill_marchspill <- function(origin_select, movements){
+estimate_spilldays_effect_SRH_NT_marchspill <- function(origin_select, movements){
   
   # set up vectors to control which origin parameters are turned on
   hatchery_origin_params <- rep(0,5)
