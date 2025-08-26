@@ -1937,60 +1937,120 @@ ggsave(here::here("figures", "transport", "paper_figures", "spill_volume", "MCN_
 #### Fallback at ICH plot ####
 
 
-TUC_N_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Tucannon River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+TUC_N_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Tucannon River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-TUC_H_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Tucannon River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+TUC_H_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Tucannon River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-ASO_N_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Asotin Creek, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+ASO_N_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Asotin Creek, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-CLE_N_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Clearwater River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+CLE_N_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Clearwater River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-CLE_H_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Clearwater River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+CLE_H_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Clearwater River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-IMN_N_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Imnaha River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+IMN_N_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Imnaha River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-IMN_H_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Imnaha River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+IMN_H_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Imnaha River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-GR_N_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Grande Ronde River, wild", 
-                                                             DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+GR_N_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Grande Ronde River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-GR_H_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Grande Ronde River, hatchery", 
-                                                             DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+GR_H_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Grande Ronde River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-SAL_N_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Salmon River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+SAL_N_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Salmon River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
-SAL_H_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Salmon River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 100)
+SAL_H_NT_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Salmon River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+TUC_N_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Tucannon River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+TUC_H_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Tucannon River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+ASO_N_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Asotin Creek, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+CLE_N_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Clearwater River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+CLE_H_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Clearwater River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+IMN_N_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Imnaha River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+IMN_H_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Imnaha River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+GR_N_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Grande Ronde River, wild", 
+                                                               DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+GR_H_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Grande Ronde River, hatchery", 
+                                                               DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+SAL_N_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Salmon River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
+
+SAL_H_T_ICH_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 8, origin_rear_select = "Salmon River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 100)
 
 
 
-combined_ICH_spill_fallback <- ggarrange(TUC_N_ICH_spill_fallback,
-                                         TUC_H_ICH_spill_fallback,
-                                         ASO_N_ICH_spill_fallback,
-                                         CLE_N_ICH_spill_fallback,
-                                         CLE_H_ICH_spill_fallback,
-                                         IMN_N_ICH_spill_fallback,
-                                         IMN_H_ICH_spill_fallback,
-                                         GR_N_ICH_spill_fallback,
-                                         GR_H_ICH_spill_fallback,
-                                         SAL_N_ICH_spill_fallback,
-                                         SAL_H_ICH_spill_fallback, 
-                                         nrow = 3, ncol = 4,
-                                         labels = c("(A) TUC, Natural",
-                                                    "(B) TUC, Hatchery", "(C) ASO, Natural",
-                                                    "(D) CLE, Natural", "(E) CLE, Hatchery",
-                                                    "(F) IMN, Natural", "(G) IMN, Hatchery",
-                                                    "(H) GR, Natural", "(I) GR, Hatchery",
-                                                    "(J) SAL, Natural", "(K) SAL, Hatchery"),
-                                         label.x = 0.05, label.y = 0.925, font.label = list(size = 14, face = "plain"),
+combined_ICH_spill_fallback <- ggarrange(TUC_N_T_ICH_spill_fallback,
+                                         TUC_N_NT_ICH_spill_fallback,
+                                         TUC_H_T_ICH_spill_fallback,
+                                         TUC_H_NT_ICH_spill_fallback,
+                                         ASO_N_T_ICH_spill_fallback,
+                                         ASO_N_NT_ICH_spill_fallback,
+                                         CLE_N_T_ICH_spill_fallback,
+                                         CLE_N_NT_ICH_spill_fallback,
+                                         CLE_H_T_ICH_spill_fallback,
+                                         CLE_H_NT_ICH_spill_fallback,
+                                         IMN_N_T_ICH_spill_fallback,
+                                         IMN_N_NT_ICH_spill_fallback,
+                                         IMN_H_T_ICH_spill_fallback,
+                                         IMN_H_NT_ICH_spill_fallback,
+                                         GR_N_T_ICH_spill_fallback,
+                                         GR_N_NT_ICH_spill_fallback,
+                                         GR_H_T_ICH_spill_fallback,
+                                         GR_H_NT_ICH_spill_fallback,
+                                         SAL_N_T_ICH_spill_fallback,
+                                         SAL_N_NT_ICH_spill_fallback,
+                                         SAL_H_T_ICH_spill_fallback, 
+                                         SAL_H_NT_ICH_spill_fallback, 
+                                         nrow = 6, ncol = 4,
+                                         labels = c("(A) TUC, Natural, in-river",
+                                                    "(B) TUC, Natural, transported",
+                                                    "(C) TUC, Hatchery, in-river", 
+                                                    "(D) TUC, Hatchery, transported", 
+                                                    "(E) ASO, Natural, in-river",
+                                                    "(F) ASO, Natural, transported",
+                                                    "(G) CLE, Natural, in-river",
+                                                    "(H) CLE, Natural, transported",
+                                                    "(I) CLE, Hatchery, in-river", 
+                                                    "(J) CLE, Hatchery, transported", 
+                                                    "(K) IMN, Natural, in-river",
+                                                    "(L) IMN, Natural, transported",
+                                                    "(M) IMN, Hatchery, in-river", 
+                                                    "(N) IMN, Hatchery, transported", 
+                                                    "(O) GR, Natural, in-river",
+                                                    "(P) GR, Natural, transported",
+                                                    "(Q) GR, Hatchery, in-river", 
+                                                    "(R) GR, Hatchery, transported", 
+                                                    "(S) SAL, Natural, in-river",
+                                                    "(T) SAL, Natural, transported",
+                                                    "(U) SAL, Hatchery, in-river", 
+                                                    "(V) SAL, Hatchery, transported"),
+                                         label.x = 0.05, label.y = 0.925, font.label = list(size = 10, face = "plain"),
                                          hjust = 0, vjust = 0)
 
 
@@ -2000,56 +2060,106 @@ combined_ICH_spill_fallback <- cowplot::ggdraw(annotate_figure(combined_ICH_spil
   theme(plot.background = element_rect(fill="white", color = NA))
 
 ggsave(here::here("figures", "transport", "paper_figures", "spill_volume", "ICH_spill_fallback.png"), 
-       combined_ICH_spill_fallback, height = 8, width = 10)
+       combined_ICH_spill_fallback, height = 16, width = 10)
 
 
 #### Fallback at LGR plot ####
 
-ASO_N_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Asotin Creek, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+ASO_N_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Asotin Creek, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-CLE_N_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Clearwater River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+CLE_N_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Clearwater River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-CLE_H_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Clearwater River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+CLE_H_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Clearwater River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-IMN_N_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Imnaha River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+IMN_N_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Imnaha River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-IMN_H_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Imnaha River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+IMN_H_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Imnaha River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-GR_N_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Grande Ronde River, wild", 
-                                                             DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+GR_N_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Grande Ronde River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-GR_H_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Grande Ronde River, hatchery", 
-                                                             DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+GR_H_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Grande Ronde River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-SAL_N_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Salmon River, wild", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+SAL_N_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Salmon River, wild", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
-SAL_H_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Salmon River, hatchery", 
-                                                              DPS_select = NA, lower_spill_lim = 0, upper_spill_lim = 60)
+SAL_H_NT_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Salmon River, hatchery", 
+                                                                 DPS_select = NA, juvenile_pathway_select = "not_transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+ASO_N_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Asotin Creek, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+CLE_N_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Clearwater River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+CLE_H_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Clearwater River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+IMN_N_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Imnaha River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+IMN_H_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Imnaha River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+GR_N_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Grande Ronde River, wild", 
+                                                               DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+GR_H_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Grande Ronde River, hatchery", 
+                                                               DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+SAL_N_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Salmon River, wild", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
+
+SAL_H_T_LGR_spill_fallback <- plot_spill_fallback_onepop_onedam(from_state = 9, origin_rear_select = "Salmon River, hatchery", 
+                                                                DPS_select = NA, juvenile_pathway_select = "transported", lower_spill_lim = 0, upper_spill_lim = 60)
 
 
 
-combined_LGR_spill_fallback <- ggarrange(ASO_N_LGR_spill_fallback,
-                                         CLE_N_LGR_spill_fallback,
-                                         CLE_H_LGR_spill_fallback,
-                                         IMN_N_LGR_spill_fallback,
-                                         IMN_H_LGR_spill_fallback,
-                                         GR_N_LGR_spill_fallback,
-                                         GR_H_LGR_spill_fallback,
-                                         SAL_N_LGR_spill_fallback,
-                                         SAL_H_LGR_spill_fallback, 
-                                         nrow = 3, ncol = 4,
-                                         labels = c("(A) ASO, Natural",
-                                                    "(B) CLE, Natural", "(C) CLE, Hatchery",
-                                                    "(D) IMN, Natural", "(E) IMN, Hatchery",
-                                                    "(F) GR, Natural", "(G) GR, Hatchery",
-                                                    "(H) SAL, Natural", "(I) SAL, Hatchery"),
-                                         label.x = 0.05, label.y = 0.925, font.label = list(size = 14, face = "plain"),
+
+combined_LGR_spill_fallback <- ggarrange(ASO_N_T_LGR_spill_fallback,
+                                         ASO_N_NT_LGR_spill_fallback,
+                                         CLE_N_T_LGR_spill_fallback,
+                                         CLE_N_NT_LGR_spill_fallback,
+                                         CLE_H_T_LGR_spill_fallback,
+                                         CLE_H_NT_LGR_spill_fallback,
+                                         IMN_N_T_LGR_spill_fallback,
+                                         IMN_N_NT_LGR_spill_fallback,
+                                         IMN_H_T_LGR_spill_fallback,
+                                         IMN_H_NT_LGR_spill_fallback,
+                                         GR_N_T_LGR_spill_fallback,
+                                         GR_N_NT_LGR_spill_fallback,
+                                         GR_H_T_LGR_spill_fallback,
+                                         GR_H_NT_LGR_spill_fallback,
+                                         SAL_N_T_LGR_spill_fallback,
+                                         SAL_N_NT_LGR_spill_fallback,
+                                         SAL_H_T_LGR_spill_fallback, 
+                                         SAL_H_NT_LGR_spill_fallback,
+                                         nrow = 5, ncol = 4,
+                                         labels = c("(A) ASO, Natural, in-river",
+                                                    "(B) ASO, Natural, transported",
+                                                    "(C) CLE, Natural, in-river",
+                                                    "(D) CLE, Natural, transported",
+                                                    "(E) CLE, Hatchery, in-river", 
+                                                    "(F) CLE, Hatchery, transported", 
+                                                    "(G) IMN, Natural, in-river",
+                                                    "(H) IMN, Natural, transported",
+                                                    "(I) IMN, Hatchery, in-river", 
+                                                    "(J) IMN, Hatchery, transported", 
+                                                    "(K) GR, Natural, in-river",
+                                                    "(L) GR, Natural, transported",
+                                                    "(M) GR, Hatchery, in-river", 
+                                                    "(N) GR, Hatchery, transported", 
+                                                    "(O) SAL, Natural, in-river",
+                                                    "(P) SAL, Natural, transported",
+                                                    "(Q) SAL, Hatchery, in-river", 
+                                                    "(R) SAL, Hatchery, transported"),
+                                         label.x = 0.05, label.y = 0.925, font.label = list(size = 10, face = "plain"),
                                          hjust = 0, vjust = 0)
 
 
@@ -2059,7 +2169,7 @@ combined_LGR_spill_fallback <- cowplot::ggdraw(annotate_figure(combined_LGR_spil
   theme(plot.background = element_rect(fill="white", color = NA))
 
 ggsave(here::here("figures", "transport", "paper_figures", "spill_volume", "LGR_spill_fallback.png"), 
-       combined_LGR_spill_fallback, height = 8, width = 10)
+       combined_LGR_spill_fallback, height = 14, width = 10)
 
 
 #### OLD CODE BELOW ####
