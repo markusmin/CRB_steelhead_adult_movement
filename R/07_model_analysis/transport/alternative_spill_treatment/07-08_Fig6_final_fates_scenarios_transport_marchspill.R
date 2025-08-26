@@ -4,23 +4,23 @@
 # simulations and plots the output
 
 # First, need to load in all of the model runs and all of the packages.
-source("R/07_model_analysis/07-01_load_stan_models.R")
-source("R/07_model_analysis/transport/07-01_load_stan_models_transport.R")
+source("R/07_model_analysis/alternative_spill_treatment/07-01_load_stan_models_marchspill.R")
+source("R/07_model_analysis/transport/alternative_spill_treatment/07-01_load_stan_models_transport_marchspill.R")
 
 # Load all of the files
 
 # Load the files
-load("figures/final_fates_scenarios/simulation_runs/UMA_MCN_winterspill_homing.rda")
-load("figures/final_fates_scenarios/simulation_runs/ENT_WEL_winterspill_homing.rda")
-load("figures/final_fates_scenarios/simulation_runs/JDR_MCN_winterspill_homing.rda")
-load("figures/final_fates_scenarios/simulation_runs/WAWA_ICH_winterspill_homing.rda")
-load("figures/final_fates_scenarios/simulation_runs/WEN_RRE_winterspill_homing.rda")
-load("figures/final_fates_scenarios/simulation_runs/YAK_PRA_winterspill_homing.rda")
+load("figures/alternative_spill_treatment/final_fates_scenarios/simulation_runs/UMA_MCN_marchspill_homing.rda")
+load("figures/alternative_spill_treatment/final_fates_scenarios/simulation_runs/ENT_WEL_marchspill_homing.rda")
+load("figures/alternative_spill_treatment/final_fates_scenarios/simulation_runs/JDR_MCN_marchspill_homing.rda")
+load("figures/alternative_spill_treatment/final_fates_scenarios/simulation_runs/WAWA_ICH_marchspill_homing.rda")
+load("figures/alternative_spill_treatment/final_fates_scenarios/simulation_runs/WEN_RRE_marchspill_homing.rda")
+load("figures/alternative_spill_treatment/final_fates_scenarios/simulation_runs/YAK_PRA_marchspill_homing.rda")
 
 # change names of these outputs
-load("figures/transport/final_fates_scenarios/simulation_runs/TUC_LGR_not_transported_homing.rda")
+load("figures/transport/alternative_spill_treatment/final_fates_scenarios/simulation_runs/TUC_LGR_not_transported_homing.rda")
 TUC_not_transported_LGR_winterspill_homing <- TUC_LGR_winterspill_homing
-load("figures/transport/final_fates_scenarios/simulation_runs/TUC_LGR_transported_homing.rda")
+load("figures/transport/alternative_spill_treatment/final_fates_scenarios/simulation_runs/TUC_LGR_transported_homing.rda")
 TUC_transported_LGR_winterspill_homing <- TUC_LGR_winterspill_homing
 
 #### Figure 7: Final fates vs. covariates ####
@@ -63,11 +63,11 @@ plot_ff_cov <- function(data, dam_name, dam_spill_column){
     geom_linerange(aes(group = rear_condition), position=position_dodge(width=3)) +
     geom_point(aes(size = rear_type, group = rear_condition), position=position_dodge(width=3)) +
     ylab("Homing Probability") +
-    xlab(paste0("Days of Winter Spill at ", dam_name)) +
+    xlab(paste0("Days of March Spill at ", dam_name)) +
     # ggtitle(" ") +
     # Create a scale common to all
     scale_y_continuous(lim = c(0, 1), breaks = seq(0, 1, 0.25)) +
-    scale_x_continuous(lim = c(-3, 95), breaks = c(0, 30, 60, 90)) +
+    scale_x_continuous(lim = c(-2, 33), breaks = c(0, 10, 20, 30)) +
     scale_fill_manual(values = rear_condition_fills, guide = "none") +
     scale_size_manual(values = c("hatchery" = 4, "natural" = 3.5), guide = "none") +
     scale_shape_manual(values = rear_shapes) +
@@ -132,7 +132,7 @@ plot_for_legend <- ggplot(WAWA_ICH_winterspill_homing, aes(x = ICH_winterspill_a
   geom_point(size = 8, position=position_dodge(width=3)) +
   geom_linerange(position=position_dodge(width=3), show.legend = FALSE) +
   ylab("Homing Probability") +
-  xlab(paste0("Days of Winter Spill at Ice Harbor Dam")) +
+  xlab(paste0("Days of March Spill at Ice Harbor Dam")) +
   # ggtitle(" ") +
   # Create a scale common to all
   scale_y_continuous(lim = c(0, 1), breaks = seq(0, 1, 0.25)) +
@@ -174,4 +174,4 @@ FF_cov_combined_plot <- cowplot::ggdraw(ggarrange(JDR_FF_cov_plot, UMA_FF_cov_pl
                                                   hjust = 0, vjust = 0)) + theme(plot.background = element_rect(fill="white", color = NA))
 
 
-ggsave(here::here("figures", "transport", "paper_figures", "Fig8_FF_cov_combined_plot_transport.png"), FF_cov_combined_plot, height = 16, width = 16)
+ggsave(here::here("figures", "transport", "alternative_spill_treatment", "paper_figures", "Fig8_FF_cov_combined_plot_transport_marchspill.png"), FF_cov_combined_plot, height = 16, width = 16)
