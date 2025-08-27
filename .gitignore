@@ -39,7 +39,7 @@ Stan/alternative_spill_treatment/snake_river_hatchery_transported/*_fit.rds
 Stan/alternative_spill_treatment/snake_river_hatchery_not_transported/*_fit.rds
 
 # Ignore any slurm output
-*slurm*
+*slurm-*
 
 
 # ignore the map files
