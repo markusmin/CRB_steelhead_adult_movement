@@ -354,24 +354,28 @@ display: none;
 
 <div id="crb_steelhead_adult_movement" class="section level1">
 <h1>CRB_steelhead_adult_movement</h1>
-<p>Workflow for using PIT tag detections to fit a multistate movement
-model to adult Steelhead returning to the Columbia River Basin.</p>
-<p><em>last updated: 2025-05-07</em></p>
-<p>Note: The raw data files are very large and therefore are not
-uploaded to GitHub. If you would like access to the data files, please
-contact me directly or follow the instructions below to query PTAGIS and
-obtain the files.</p>
+<p>Repository for the following publication: Min, M. A., Buchanan, R.
+A., &amp; Scheuerell, M.D. (2025). Modeling climate and hydropower
+influences on the movement decisions of an anadromous species. Global
+Change Biology.</p>
+<p><em>last updated: 2025-08-27</em></p>
+<p>Note: Some files are not uploaded because they are very large. These
+include the raw data files are very large and the modeling outputs. For
+the raw data, please contact me directly or follow the instructions
+below to query PTAGIS and obtain the files. For the modeling outputs,
+please contact me directly or follow the steps below to fit the
+models.</p>
 <p>To reproduce this analysis, you must run the following scripts
 <strong>sequentially</strong>:</p>
-<p>The directories are set up as follows: – Data ——- all input data
-files for project |– covariate_data ——- temperature, flow, and spill
-data queried from CBR DART |– PTAGIS_queries ——- tag histories for
-individual fish queried from PTAGIS – R/ ——- all scripts necessary to
-reproduce analysis |– functions ——- individual function definitions,
-which are sourced by other scripts in the R/ folder |– hyak ——- jobs and
-scripts for running the workflow on UW’ Hyak HPC – intermediate_outputs/
-——- outputs from scripts in the R/ folder that are inputs to later
-scripts</p>
+<p>The directories are set up as follows:</p>
+<p>– Data ——- all input data files for project |– covariate_data ——-
+temperature, flow, and spill data queried from CBR DART |–
+PTAGIS_queries ——- tag histories for individual fish queried from PTAGIS
+– R/ ——- all scripts necessary to reproduce analysis |– functions ——-
+individual function definitions, which are sourced by other scripts in
+the R/ folder |– hyak ——- jobs and scripts for running the workflow on
+UW’ Hyak HPC – intermediate_outputs/ ——- outputs from scripts in the R/
+folder that are inputs to later scripts</p>
 <div id="part-1-prepare-the-fish-movement-data-for-inclusion-in-the-model" class="section level2">
 <h2>Part 1: Prepare the fish movement data for inclusion in the
 model</h2>
@@ -524,9 +528,14 @@ script that prepares the data for each DPS (e.g.,
 <div id="step-6-run-the-stan-model" class="section level4">
 <h4>Step 6: Run the Stan model</h4>
 <p>This step was run on UW’s Hyak high perfomance computing cluster.</p>
-<p>The scripts can all be found in the <code>Stan/</code> folder: - the
-*_model.stan file is the stan model - the <em><em>chain[1-4].R files
-each run one chain of the Stan model - the
+<p>The scripts can all be found in the <code>Stan/</code> folder. One
+subfolder exists for each combination of DPS/rear type (and juvenile
+pathway, in the case of Snake River fish). Additionally, the
+<code>Stan/alternative_spill_treatment</code> folder contains the code
+to re-run all of the same models, but with only the effect of March
+spill (rather than Winter spill). In each subfolder, you will find the
+following files: - the *_model.stan file is the stan model - the
+<em><em>chain[1-4].R files each run one chain of the Stan model - the
 job</em></em>_chain[1-4].slurm are jobs that run the files above on
 hyak. - the *_submit_chains.sh scripts are shell scripts that submit all
 of the above jobs.</p>
@@ -536,7 +545,11 @@ of the above jobs.</p>
 <p>This step is handled by multiple scripts stored in the
 <code>R/07_model_analysis</code> folder that examine model diagnostics
 and create different results for the paper. Because the model output
-files are quite large, many of these scripts were run on Hyak.</p>
+files are quite large, many of these scripts were run on Hyak. Please
+note the final model analysis scripts are found in both the
+<code>/transport/</code> subfolder of the
+<code>R/07_model_analysis</code> folder as well as in the main
+folder.</p>
 <p>The scripts within this folder are as follows: -
 <code>07-00_install_dependencies.R</code> - This script installs all
 dependices needed to run the following scripts in this folder. -
@@ -582,6 +595,9 @@ to run the script on Hyak exists for each population of interest: -
 <code>07-07-07_ent_ff_cov_job.slurm</code> -
 <code>07-07-08_yak_ff_cov.R</code> -
 <code>07-07-08_yak_ff_cov_job.slurm</code> -
+<code>/transport/07-07_final_fates_scenarios/</code> also contains the
+jobs re-run with Tucannon River transported and in-river (not
+transported) fish modeled separately. -
 <code>07-08_Fig6_final_fates_scenarios.R</code> - This script uses the
 output generated by the scripts in folder
 <code>/07-07_final_fates_scenarios/</code> and generates figure 6 in the
@@ -606,6 +622,8 @@ to the Stan model outputs.</p>
 <li>This generates the map of the study region, which is Fig. 1A. Fig.
 1B and Fig. 2 are not generated by a script.</li>
 </ul></li>
+<li><code>Min_2025_supplement.Rmd</code> this contains all of the
+scripts necessary to reproduce the supplemental materials.</li>
 </ul>
 </div>
 </div>
