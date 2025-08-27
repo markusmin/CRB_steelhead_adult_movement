@@ -368,14 +368,13 @@ models.</p>
 <p>To reproduce this analysis, you must run the following scripts
 <strong>sequentially</strong>:</p>
 <p>The directories are set up as follows:</p>
-<p>– Data ——- all input data files for project |– covariate_data ——-
-temperature, flow, and spill data queried from CBR DART |–
-PTAGIS_queries ——- tag histories for individual fish queried from PTAGIS
-– R/ ——- all scripts necessary to reproduce analysis |– functions ——-
-individual function definitions, which are sourced by other scripts in
-the R/ folder |– hyak ——- jobs and scripts for running the workflow on
-UW’ Hyak HPC – intermediate_outputs/ ——- outputs from scripts in the R/
-folder that are inputs to later scripts</p>
+<pre><code>-- Data ------- all input data files for project
+  |-- covariate_data ------- temperature, flow, and spill data queried from CBR DART
+  |-- PTAGIS_queries ------- tag histories for individual fish queried from PTAGIS
+-- R/ ------- all scripts necessary to reproduce analysis
+  |-- functions ------- individual function definitions, which are sourced by other scripts in the R/ folder
+  |-- hyak ------- jobs and scripts for running the workflow on UW&#39; Hyak HPC
+-- intermediate_outputs/ ------- outputs from scripts in the R/ folder that are inputs to later scripts</code></pre>
 <div id="part-1-prepare-the-fish-movement-data-for-inclusion-in-the-model" class="section level2">
 <h2>Part 1: Prepare the fish movement data for inclusion in the
 model</h2>

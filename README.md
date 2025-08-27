@@ -11,14 +11,19 @@ To reproduce this analysis, you must run the following scripts **sequentially**:
 
 The directories are set up as follows:
 
+```
 -- Data ------- all input data files for project
   |-- covariate_data ------- temperature, flow, and spill data queried from CBR DART
-  |-- PTAGIS_queries ------- tag histories for individual fish queried from PTAGIS
 -- R/ ------- all scripts necessary to reproduce analysis
+  |-- 06_prepare_stan_inputs ------- scripts to process data for input into Stan. See description below.
+  |-- 07_model_analysis ------- scripts to process MCMC model output. See description below.
   |-- functions ------- individual function definitions, which are sourced by other scripts in the R/ folder
   |-- hyak ------- jobs and scripts for running the workflow on UW' Hyak HPC
--- intermediate_outputs/ ------- outputs from scripts in the R/ folder that are inputs to later scripts
+-- Stan ------- all files to run Bayesian model in Stan
+-- intermediate_outputs/ ------- data processing output from scripts in the R/ folder that are inputs to later scripts. This is provided in lieu of the raw data, which is very large (and can be accessed via PTAGIS).
+-- figures ------- various figures
 
+```
 
 
 ## Part 1: Prepare the fish movement data for inclusion in the model
