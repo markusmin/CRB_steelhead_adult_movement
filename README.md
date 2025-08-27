@@ -20,9 +20,9 @@ The directories are set up as follows:
   |-- functions ------- individual function definitions, which are sourced by other scripts in the R/ folder
   |-- hyak ------- jobs and scripts for running the workflow on UW' Hyak HPC
 -- Stan ------- all files to run Bayesian model in Stan
--- intermediate_outputs/ ------- data processing output from scripts in the R/ folder that are inputs to later scripts. This is provided in lieu of the raw data, which is very large (and can be accessed via PTAGIS).
+-- docs ------- includes supplemental materials HTML output, so that it can be easily viewed on GitHub
 -- figures ------- various figures
-
+-- intermediate_outputs/ ------- data processing output from scripts in the R/ folder that are inputs to later scripts. This is provided in lieu of the raw data, which is very large (and can be accessed via PTAGIS).
 ```
 
 
